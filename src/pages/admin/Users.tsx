@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
-import { Search, Plus, UserPlus, MoreVertical, X } from 'lucide-react';
+import { Search, Plus, UserPlus, X, Edit2, Trash2 } from 'lucide-react';
 
 interface User {
   id: string;
@@ -26,12 +26,13 @@ export const Users: React.FC = () => {
   });
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
       const response = await api.get('/users/', {
-        params: { search, limit: 50 }
+        params: { search, limit: 50, is_active: true }
       });
       setUsers(response.data.data);
     } catch (error) {
@@ -58,10 +59,18 @@ export const Users: React.FC = () => {
       if (!payload.email) {
         delete (payload as any).email;
       }
-      await api.post('/users/', payload);
+      
+      if (editingUserId) {
+        if (!payload.password) delete (payload as any).password;
+        await api.put(`/users/${editingUserId}`, payload);
+      } else {
+        await api.post('/users/', payload);
+      }
+      
       setIsModalOpen(false);
       fetchUsers(); // Refresh list
       setFormData({ full_name: '', phone: '+998', email: '', password: '', role: 'teacher' });
+      setEditingUserId(null);
     } catch (err: any) {
       setFormError(err.response?.data?.detail || "Xatolik yuz berdi");
     } finally {
@@ -77,7 +86,11 @@ export const Users: React.FC = () => {
           <p className="text-gray-400 mt-1">O'quv markaz barcha xodimlari ro'yxati va boshqaruvi.</p>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setFormData({ full_name: '', phone: '+998', email: '', password: '', role: 'teacher' });
+            setEditingUserId(null);
+            setIsModalOpen(true);
+          }}
           className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
         >
           <UserPlus className="w-5 h-5" />
@@ -130,15 +143,54 @@ export const Users: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      {/* Note: UserBriefResponse has no is_active in current schema, we fallback or just ignore for brief */}
-                      <span className="text-emerald-400 flex items-center gap-1.5 text-xs font-medium">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Aktiv
-                      </span>
+                      {user.is_active ? (
+                        <span className="text-emerald-400 flex items-center gap-1.5 text-xs font-medium">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Aktiv
+                        </span>
+                      ) : (
+                        <span className="text-red-400 flex items-center gap-1.5 text-xs font-medium">
+                          <span className="w-2 h-2 rounded-full bg-red-500"></span> Deaktiv
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-700 transition-colors">
-                        <MoreVertical className="w-5 h-5" />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => {
+                            setFormData({
+                              full_name: user.full_name,
+                              phone: user.phone,
+                              email: '',
+                              password: '',
+                              role: user.role
+                            });
+                            setEditingUserId(user.id);
+                            setIsModalOpen(true);
+                          }}
+                          className="text-blue-400 hover:text-blue-300 p-1.5 rounded hover:bg-gray-700 transition-colors"
+                          title="Tahrirlash"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        {user.is_active && (
+                          <button 
+                            onClick={async () => {
+                              if (window.confirm("Rostdan ham ushbu xodimni deaktivatsiya qilmoqchimisiz?")) {
+                                try {
+                                  await api.delete(`/users/${user.id}`);
+                                  fetchUsers();
+                                } catch (err) {
+                                  alert("Xatolik yuz berdi");
+                                }
+                              }
+                            }}
+                            className="text-red-400 hover:text-red-300 p-1.5 rounded hover:bg-gray-700 transition-colors"
+                            title="Deaktiv qilish"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -153,8 +205,8 @@ export const Users: React.FC = () => {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-5 border-b border-gray-800 flex justify-between items-center bg-gray-800/20">
-              <h3 className="text-xl font-bold text-white">Yangi xodim qo'shish</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white">
+              <h3 className="text-xl font-bold text-white">{editingUserId ? "Xodimni tahrirlash" : "Yangi xodim qo'shish"}</h3>
+              <button onClick={() => { setIsModalOpen(false); setEditingUserId(null); }} className="text-gray-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -186,15 +238,17 @@ export const Users: React.FC = () => {
                 />
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1.5">Parol</label>
-                <input 
-                  type="password" required
-                  value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})}
-                  className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500"
-                  placeholder="Kamida 8 belgi va 1 ta raqam"
-                />
-              </div>
+              {!editingUserId && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1.5">Parol</label>
+                  <input 
+                    type="password" required={!editingUserId}
+                    value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})}
+                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500"
+                    placeholder="Kamida 8 belgi va 1 ta raqam"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1.5">Roli</label>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
-import { Users, ArrowLeft, Plus, X, UserMinus, UserCheck, Search } from 'lucide-react';
+import { Users, ArrowLeft, Plus, X, UserMinus, UserCheck, Search, Edit2 } from 'lucide-react';
+import { GroupFormModal, GroupFormData } from '../../components/admin/GroupFormModal';
 
 export const GroupDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,15 +19,29 @@ export const GroupDetails: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
+  // Edit Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editFormError, setEditFormError] = useState('');
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<any[]>([]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [groupRes, enrollRes] = await Promise.all([
+      const [groupRes, enrollRes, coursesRes, teachersRes, roomsRes] = await Promise.all([
         api.get(`/groups/${id}`),
-        api.get(`/groups/${id}/students`)
+        api.get(`/groups/${id}/students`),
+        api.get('/courses/'),
+        api.get('/users/', { params: { role: 'teacher' } }),
+        api.get('/rooms/', { params: { limit: 100 } })
       ]);
       setGroup(groupRes.data);
       setEnrollments(enrollRes.data);
+      setCourses(coursesRes.data.data || []);
+      setTeachers(teachersRes.data.data || []);
+      setRooms(roomsRes.data.data || []);
     } catch (error) {
       console.error("Guruh tafsilotlari yuklanmadi", error);
     } finally {
@@ -95,6 +110,32 @@ export const GroupDetails: React.FC = () => {
     }
   };
 
+  const handleEditGroupSubmit = async (data: GroupFormData) => {
+    setEditFormError('');
+    setIsEditSubmitting(true);
+    
+    if (data.schedule.length === 0) {
+      setEditFormError("Kamida bitta kun tanlanishi kerak!");
+      setIsEditSubmitting(false);
+      return;
+    }
+    
+    try {
+      const payload = {
+        ...data,
+        room_id: data.room_id || null, // Optional in backend
+        teacher_id: data.teacher_id || null, // Optional in backend
+      };
+      await api.put(`/groups/${id}`, payload);
+      setIsEditModalOpen(false);
+      fetchData(); // Guruh malumotlarini yangilash
+    } catch (err: any) {
+      setEditFormError(err.response?.data?.detail || "Xatolik yuz berdi");
+    } finally {
+      setIsEditSubmitting(false);
+    }
+  };
+
   if (loading && !group) {
     return <div className="text-gray-400 text-center py-10">Yuklanmoqda...</div>;
   }
@@ -111,7 +152,16 @@ export const GroupDetails: React.FC = () => {
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">{group.name}</h2>
+          <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
+            {group.name}
+            <button 
+              onClick={() => setIsEditModalOpen(true)}
+              className="p-1.5 bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+              title="Guruhni tahrirlash"
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+          </h2>
           <p className="text-gray-400 mt-1">Status: {group.status} | Boshlanish: {group.start_date}</p>
         </div>
       </div>
@@ -186,10 +236,13 @@ export const GroupDetails: React.FC = () => {
                 <span>Ustoz:</span> <span className="text-white font-medium">{group.teacher?.full_name || 'Biriktirilmagan'}</span>
               </li>
               <li className="flex justify-between">
-                <span>Xona:</span> <span className="text-white font-medium">{group.room_id || '-'}</span>
+                <span>O'quvchilar:</span> <span className="text-white font-medium">{enrollments.length} / {group.max_students}</span>
               </li>
               <li className="flex justify-between">
-                <span>Tugash:</span> <span className="text-white font-medium">{group.end_date || 'Noaniq'}</span>
+                <span>Xona:</span> <span className="text-white font-medium">{group.room?.name || rooms.find((r: any) => r.id === group.room_id)?.name || 'Biriktirilmagan'}</span>
+              </li>
+              <li className="flex justify-between">
+                <span>Tugash:</span> <span className="text-white font-medium">{group.end_date || (group.course?.duration_months ? `Taxminan: ${new Date(new Date(group.start_date).getTime() + group.course.duration_months * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}` : 'Noaniq')}</span>
               </li>
             </ul>
           </div>
@@ -270,6 +323,30 @@ export const GroupDetails: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Edit Group Modal */}
+      {group && (
+        <GroupFormModal 
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onSubmit={handleEditGroupSubmit}
+          initialData={{
+            name: group.name,
+            course_id: group.course_id,
+            room_id: group.room_id || '',
+            teacher_id: group.teacher_id || '',
+            start_date: group.start_date,
+            max_students: group.max_students,
+            schedule: group.schedule || []
+          }}
+          courses={courses}
+          teachers={teachers}
+          rooms={rooms}
+          isSubmitting={isEditSubmitting}
+          formError={editFormError}
+          title="Guruhni tahrirlash"
+        />
       )}
     </div>
   );

@@ -14,6 +14,7 @@ import { Settings } from './pages/admin/Settings';
 import { FaceID } from './pages/admin/FaceID';
 
 import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
+import { TeacherGroups } from './pages/teacher/TeacherGroups';
 import { TeacherGroupDetails } from './pages/teacher/TeacherGroupDetails';
 import { StudentDashboard } from './pages/student/StudentDashboard';
 
@@ -83,6 +84,7 @@ function App() {
               <ProtectedRoute allowedRole="teacher">
                 <Routes>
                   <Route index element={<TeacherDashboard />} />
+                  <Route path="groups" element={<TeacherGroups />} />
                   <Route path="groups/:id" element={<TeacherGroupDetails />} />
                 </Routes>
               </ProtectedRoute>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
-import { Search, UserPlus, MoreVertical, X } from 'lucide-react';
+import { Search, Plus, UserPlus, X, Edit2, Trash2, RefreshCcw } from 'lucide-react';
 
 interface Student {
   id: string;
@@ -158,9 +158,9 @@ export const Students: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-700/50">
               {loading ? (
-                <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500">Yuklanmoqda...</td></tr>
+                <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">Yuklanmoqda...</td></tr>
               ) : students.length === 0 ? (
-                <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500">O'quvchilar topilmadi</td></tr>
+                <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">O'quvchilar topilmadi</td></tr>
               ) : (
                 students.map(student => (
                   <tr key={student.id} className="hover:bg-gray-700/20 transition-colors">
@@ -185,22 +185,40 @@ export const Students: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex gap-2 justify-end">
+                      <div className="flex items-center justify-end gap-2">
                         <button 
                           onClick={() => handleEdit(student)}
-                          className="text-gray-400 hover:text-white p-2 flex items-center justify-center rounded hover:bg-gray-700 transition-colors"
+                          className="text-blue-400 hover:text-blue-300 p-1.5 rounded hover:bg-gray-700 transition-colors"
                           title="Tahrirlash"
                         >
-                          <Search className="w-4 h-4" /> {/* Use edit icon if available or just label it. Let's use string 'Tahrir' */}
-                          <span className="text-xs ml-1 font-medium">Tahrir</span>
+                          <Edit2 className="w-4 h-4" />
                         </button>
-                        <button 
-                          onClick={() => handleDelete(student.id, student.full_name)}
-                          className="text-red-400 hover:text-red-300 p-2 flex items-center justify-center rounded hover:bg-red-500/20 transition-colors"
-                          title="O'chirish"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+                        {student.status !== 'expelled' ? (
+                          <button 
+                            onClick={() => handleDelete(student.id, student.full_name)}
+                            className="text-red-400 hover:text-red-300 p-1.5 rounded hover:bg-gray-700 transition-colors"
+                            title="O'chirish"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={async () => {
+                              if (window.confirm(`Rostdan ham '${student.full_name}'ni qayta tiklashni xohlaysizmi?`)) {
+                                try {
+                                  await api.put(`/students/${student.id}`, { status: 'active' });
+                                  fetchStudents();
+                                } catch (err) {
+                                  alert("Tiklashda xatolik yuz berdi");
+                                }
+                              }
+                            }}
+                            className="text-emerald-400 hover:text-emerald-300 p-1.5 rounded hover:bg-gray-700 transition-colors"
+                            title="Qayta tiklash"
+                          >
+                            <RefreshCcw className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

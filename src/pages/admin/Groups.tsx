@@ -1,17 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
-import { Search, Plus, MoreVertical, X, Users, Copy } from 'lucide-react';
-
-const DAYS_MAP = [
-  { id: 'monday', label: 'Du' },
-  { id: 'tuesday', label: 'Se' },
-  { id: 'wednesday', label: 'Ch' },
-  { id: 'thursday', label: 'Pa' },
-  { id: 'friday', label: 'Ju' },
-  { id: 'saturday', label: 'Sh' },
-  { id: 'sunday', label: 'Ya' },
-];
+import { Search, Plus, MoreVertical, Users, Edit2, Trash2 } from 'lucide-react';
+import { GroupFormModal, GroupFormData } from '../../components/admin/GroupFormModal';
 
 interface Group {
   id: string;
@@ -27,20 +18,14 @@ export const Groups: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   
-  // Create Modal State
+  // Create/Edit Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    course_id: '',
-    teacher_id: '',
-    start_date: new Date().toISOString().split('T')[0],
-    max_students: 15,
-    schedule: [
-      { day: 'monday', start: '14:00', end: '16:00' }
-    ]
-  });
+  const [selectedGroupToEdit, setSelectedGroupToEdit] = useState<GroupFormData | undefined>(undefined);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  
   const [courses, setCourses] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<any[]>([]);
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -58,13 +43,17 @@ export const Groups: React.FC = () => {
 
   const fetchDependencies = async () => {
     try {
-      const [cRes, tRes] = await Promise.all([
+      const [cRes, tRes, rRes] = await Promise.all([
         api.get('/courses/'),
-        api.get('/users/', { params: { role: 'teacher' } })
+        api.get('/users/', { params: { role: 'teacher' } }),
+        api.get('/rooms/', { params: { limit: 100 } })
       ]);
       setCourses(cRes.data.data || []);
       setTeachers(tRes.data.data || []);
-      if (cRes.data.data.length > 0) setFormData(prev => ({ ...prev, course_id: cRes.data.data[0].id }));
+      setRooms(rRes.data.data || []);
+      if (cRes.data.data.length > 0) {
+        // Form ma'lumotlari endi modalning o'zida boshqariladi
+      }
     } catch (e) {
       console.error("Dependency yuklanishda xato", e);
     }
@@ -75,59 +64,41 @@ export const Groups: React.FC = () => {
     fetchDependencies();
   }, []);
 
-  const toggleDay = (dayId: string) => {
-    setFormData(prev => {
-      const exists = prev.schedule.find(s => s.day === dayId);
-      if (exists) {
-        return { ...prev, schedule: prev.schedule.filter(s => s.day !== dayId) };
-      } else {
-        // Osonlik uchun, birinchi tanlangan kunning vaqtidan nusxa olamiz
-        const defaultTime = prev.schedule.length > 0 
-          ? { start: prev.schedule[0].start, end: prev.schedule[0].end }
-          : { start: '14:00', end: '16:00' };
-        
-        // Kunlarni to'g'ri tartiblash (Dush -> Yak)
-        const newSchedule = [...prev.schedule, { day: dayId, ...defaultTime }];
-        newSchedule.sort((a, b) => {
-          const idxA = DAYS_MAP.findIndex(d => d.id === a.day);
-          const idxB = DAYS_MAP.findIndex(d => d.id === b.day);
-          return idxA - idxB;
-        });
-        
-        return { ...prev, schedule: newSchedule };
-      }
-    });
+  const handleOpenCreate = () => {
+    setSelectedGroupToEdit(undefined);
+    setSelectedGroupId(null);
+    setFormError('');
+    setIsModalOpen(true);
   };
 
-  const updateScheduleTime = (dayId: string, field: 'start' | 'end', value: string) => {
-    setFormData(prev => {
-      const newSchedule = prev.schedule.map(s => 
-        s.day === dayId ? { ...s, [field]: value } : s
-      );
-      return { ...prev, schedule: newSchedule };
-    });
+  const handleOpenEdit = async (e: React.MouseEvent, group: any) => {
+    e.stopPropagation();
+    try {
+      // Fetch full group details including schedule
+      const res = await api.get(`/groups/${group.id}`);
+      const g = res.data;
+      setSelectedGroupToEdit({
+        name: g.name,
+        course_id: g.course_id,
+        room_id: g.room_id || '',
+        teacher_id: g.teacher_id || '',
+        start_date: g.start_date,
+        max_students: g.max_students,
+        schedule: g.schedule || []
+      });
+      setSelectedGroupId(g.id);
+      setFormError('');
+      setIsModalOpen(true);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const syncAllTimes = (sourceDayId: string) => {
-    setFormData(prev => {
-      const source = prev.schedule.find(s => s.day === sourceDayId);
-      if (!source) return prev;
-      
-      const newSchedule = prev.schedule.map(s => ({
-        ...s,
-        start: source.start,
-        end: source.end
-      }));
-      return { ...prev, schedule: newSchedule };
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (data: GroupFormData) => {
     setFormError('');
     setIsSubmitting(true);
     
-    if (formData.schedule.length === 0) {
+    if (data.schedule.length === 0) {
       setFormError("Kamida bitta kun tanlanishi kerak!");
       setIsSubmitting(false);
       return;
@@ -135,10 +106,17 @@ export const Groups: React.FC = () => {
     
     try {
       const payload = {
-        ...formData,
-        teacher_id: formData.teacher_id || null, // Optional in backend
+        ...data,
+        room_id: data.room_id || null, // Optional in backend
+        teacher_id: data.teacher_id || null, // Optional in backend
       };
-      await api.post('/groups/', payload);
+      
+      if (selectedGroupId) {
+        await api.put(`/groups/${selectedGroupId}`, payload);
+      } else {
+        await api.post('/groups/', payload);
+      }
+      
       setIsModalOpen(false);
       fetchGroups();
     } catch (err: any) {
@@ -149,7 +127,21 @@ export const Groups: React.FC = () => {
   };
 
   // Filter groups by search manually since backend search might not be implemented for groups
-  const filteredGroups = groups.filter(g => g.name.toLowerCase().includes(search.toLowerCase()));
+  const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
+    e.stopPropagation();
+    if (!window.confirm(`Rostdan ham '${name}' guruhini o'chirishni xohlaysizmi?`)) return;
+    try {
+      await api.delete(`/groups/${id}`);
+      fetchGroups();
+    } catch (err) {
+      alert("Guruhni o'chirishda xatolik yuz berdi");
+    }
+  };
+
+  const filteredGroups = groups.filter(g => 
+    (g.status !== 'archived' && g.status !== 'ARCHIVED') && 
+    g.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -159,7 +151,7 @@ export const Groups: React.FC = () => {
           <p className="text-gray-400 mt-1">O'quv markazning barcha guruhlari va ularning holati.</p>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleOpenCreate}
           className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
         >
           <Plus className="w-5 h-5" />
@@ -218,9 +210,22 @@ export const Groups: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-700 transition-colors">
-                        <MoreVertical className="w-5 h-5" />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={(e) => handleOpenEdit(e, group)}
+                          className="text-blue-400 hover:text-blue-300 p-1.5 rounded hover:bg-gray-700 transition-colors"
+                          title="Tahrirlash"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={(e) => handleDelete(e, group.id, group.name)}
+                          className="text-red-400 hover:text-red-300 p-1.5 rounded hover:bg-gray-700 transition-colors"
+                          title="O'chirish"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -230,162 +235,19 @@ export const Groups: React.FC = () => {
         </div>
       </div>
 
-      {/* Create Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-gray-800 flex justify-between items-center bg-gray-800/20">
-              <h3 className="text-xl font-bold text-white">Yangi guruh ochish</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              {formError && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg text-center">
-                  {formError}
-                </div>
-              )}
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1.5">Guruh nomi</label>
-                <input 
-                  type="text" required
-                  value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
-                  className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500"
-                  placeholder="Masalan: IELTS 2024-A"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1.5">Kursni tanlang</label>
-                  <select 
-                    required
-                    value={formData.course_id} onChange={e => setFormData({...formData, course_id: e.target.value})}
-                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500"
-                  >
-                    <option value="" disabled>Tanlang...</option>
-                    {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1.5">O'qituvchi</label>
-                  <select 
-                    value={formData.teacher_id} onChange={e => setFormData({...formData, teacher_id: e.target.value})}
-                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500"
-                  >
-                    <option value="">Biriktirilmagan</option>
-                    {teachers.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1.5">Boshlanish sanasi</label>
-                  <input 
-                    type="date" required
-                    value={formData.start_date} onChange={e => setFormData({...formData, start_date: e.target.value})}
-                    className="w-full bg-gray-800 border border-gray-700 text-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1.5">Maksimal o'quvchilar</label>
-                  <input 
-                    type="number" required min="1" max="100"
-                    value={formData.max_students} onChange={e => setFormData({...formData, max_students: parseInt(e.target.value)})}
-                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Dars kunlari va vaqtlari (Schedule Builder) */}
-              <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-4 mt-2">
-                <label className="block text-sm font-medium text-gray-400 mb-3">Dars kunlarini tanlang</label>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {DAYS_MAP.map(d => {
-                    const isSelected = formData.schedule.some(s => s.day === d.id);
-                    return (
-                      <button
-                        key={d.id}
-                        type="button"
-                        onClick={() => toggleDay(d.id)}
-                        className={`w-10 h-10 rounded-full font-medium transition-all duration-200 flex items-center justify-center ${
-                          isSelected 
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25 ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-900' 
-                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white border border-gray-700'
-                        }`}
-                      >
-                        {d.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {formData.schedule.length > 0 && (
-                  <div className="space-y-3 mt-4 pt-4 border-t border-gray-700/50">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-gray-400">Tanlangan kunlar vaqti</span>
-                      {formData.schedule.length > 1 && (
-                        <button 
-                          type="button"
-                          onClick={() => syncAllTimes(formData.schedule[0].day)}
-                          className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 bg-blue-500/10 px-2 py-1 rounded"
-                          title="Birinchi kunning soatlarini qolgan barcha kunlarga ko'chirish"
-                        >
-                          <Copy className="w-3 h-3" />
-                          Barchasiga qo'llash
-                        </button>
-                      )}
-                    </div>
-                    
-                    {formData.schedule.map((scheduleItem) => {
-                      const dayLabel = DAYS_MAP.find(d => d.id === scheduleItem.day)?.label;
-                      return (
-                        <div key={scheduleItem.day} className="flex items-center gap-3 bg-gray-900/50 p-2.5 rounded-lg border border-gray-700/50">
-                          <div className="w-10 text-center font-bold text-gray-300">{dayLabel}</div>
-                          <div className="flex-1 flex gap-2">
-                            <input 
-                              type="time" required
-                              value={scheduleItem.start}
-                              onChange={e => updateScheduleTime(scheduleItem.day, 'start', e.target.value)}
-                              className="w-full bg-gray-800 border border-gray-700 text-white rounded px-2 py-1.5 focus:outline-none focus:border-blue-500 text-sm"
-                            />
-                            <span className="text-gray-500 flex items-center">-</span>
-                            <input 
-                              type="time" required
-                              value={scheduleItem.end}
-                              onChange={e => updateScheduleTime(scheduleItem.day, 'end', e.target.value)}
-                              className="w-full bg-gray-800 border border-gray-700 text-white rounded px-2 py-1.5 focus:outline-none focus:border-blue-500 text-sm"
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="pt-4 flex gap-3">
-                <button 
-                  type="button" onClick={() => setIsModalOpen(false)}
-                  className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-2.5 rounded-lg font-medium transition-colors border border-gray-700"
-                >
-                  Bekor qilish
-                </button>
-                <button 
-                  type="submit" disabled={isSubmitting}
-                  className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Saqlanmoqda...' : 'Saqlash'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Create / Edit Modal */}
+      <GroupFormModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleSubmit}
+        initialData={selectedGroupToEdit}
+        courses={courses}
+        teachers={teachers}
+        rooms={rooms}
+        isSubmitting={isSubmitting}
+        formError={formError}
+        title={selectedGroupId ? "Guruhni tahrirlash" : "Yangi guruh ochish"}
+      />
     </div>
   );
 };
