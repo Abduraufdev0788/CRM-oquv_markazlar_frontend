@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
-import { 
-  Users, 
-  MapPin, 
-  Calendar, 
-  Clock, 
-  BookOpen, 
-  ChevronRight, 
-  MoreVertical 
+import {
+  Users,
+  MapPin,
+  Calendar,
+  Clock,
+  BookOpen,
+  ChevronRight,
+  MoreVertical
 } from 'lucide-react';
 
 interface Group {
@@ -41,7 +41,7 @@ export const TeacherGroups: React.FC = () => {
       try {
         const response = await api.get('/groups/');
         // Sort groups by start date descending
-        const sortedGroups = (response.data.data || []).sort((a: Group, b: Group) => 
+        const sortedGroups = (response.data.data || []).sort((a: Group, b: Group) =>
           new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
         );
         setGroups(sortedGroups);
@@ -112,9 +112,9 @@ export const TeacherGroups: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {groups.map(group => {
             const courseColor = group.course?.color_hex || '#3b82f6'; // default blue
-            
+
             return (
-              <div 
+              <div
                 key={group.id}
                 onClick={() => navigate(`/teacher/groups/${group.id}`)}
                 className="group relative bg-gray-800/40 backdrop-blur-md rounded-3xl border border-gray-700/50 overflow-hidden cursor-pointer hover:border-gray-600 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
@@ -123,21 +123,23 @@ export const TeacherGroups: React.FC = () => {
                 }}
               >
                 {/* Top Colored Accent Bar */}
-                <div 
-                  className="h-2 w-full" 
+                <div
+                  className="h-2 w-full"
                   style={{ backgroundColor: courseColor }}
                 ></div>
-                
+
                 <div className="p-6">
                   {/* Card Header */}
                   <div className="flex justify-between items-start mb-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span 
+                        <span
                           className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider text-white"
                           style={{ backgroundColor: `${courseColor}40`, border: `1px solid ${courseColor}80` }}
                         >
-                          {group.course?.name || "Noma'lum kurs"}
+                          {group.cours01
+Jahongir Evodullayev
+2-xonae?.name || "Noma'lum kurs"}
                         </span>
                       </div>
                       <h3 className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors line-clamp-1">
@@ -158,7 +160,7 @@ export const TeacherGroups: React.FC = () => {
                         <span className="text-sm font-medium">{group.start_date}</span>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2.5 text-gray-300">
                       <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
                         <Clock className="w-4 h-4 text-purple-400" />

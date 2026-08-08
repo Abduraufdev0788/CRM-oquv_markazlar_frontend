@@ -18,6 +18,7 @@ export const GroupDetails: React.FC = () => {
   const [studentSearch, setStudentSearch] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [studentToDrop, setStudentToDrop] = useState<string | null>(null);
 
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -100,13 +101,15 @@ export const GroupDetails: React.FC = () => {
     }
   };
 
-  const handleDropStudent = async (enrollmentId: string) => {
-    if (!window.confirm("Rostdan ham ushbu o'quvchini guruhdan chiqarmoqchimisiz?")) return;
+  const confirmDropStudent = async () => {
+    if (!studentToDrop) return;
     try {
-      await api.put(`/enrollments/${enrollmentId}`, { status: 'dropped' });
+      await api.put(`/enrollments/${studentToDrop}`, { status: 'dropped' });
       fetchData();
     } catch (err) {
       alert("O'chirishda xatolik");
+    } finally {
+      setStudentToDrop(null);
     }
   };
 
@@ -209,7 +212,7 @@ export const GroupDetails: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button 
-                          onClick={() => handleDropStudent(enr.id)}
+                          onClick={() => setStudentToDrop(enr.id)}
                           className="text-red-400 hover:text-white hover:bg-red-500/20 p-2 rounded-lg transition-colors border border-transparent hover:border-red-500/30"
                           title="Guruhdan chiqarish"
                         >
@@ -321,6 +324,43 @@ export const GroupDetails: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Drop Confirm Modal */}
+      {studentToDrop && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-gray-800 flex justify-between items-center bg-red-500/10">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                Tasdiqlash
+              </h3>
+              <button onClick={() => setStudentToDrop(null)} className="text-gray-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <p className="text-gray-300 text-center">
+                Rostdan ham ushbu o'quvchini guruhdan chiqarmoqchimisiz?
+              </p>
+              
+              <div className="pt-4 flex gap-3">
+                <button 
+                  onClick={() => setStudentToDrop(null)}
+                  className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-2.5 rounded-xl font-medium transition-colors"
+                >
+                  Yo'q
+                </button>
+                <button 
+                  onClick={confirmDropStudent}
+                  className="flex-1 bg-red-600 hover:bg-red-500 text-white py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-red-500/25"
+                >
+                  Ha, chiqarish
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

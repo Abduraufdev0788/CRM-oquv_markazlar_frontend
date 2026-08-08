@@ -21,10 +21,11 @@ export const TeacherGroupDetails: React.FC = () => {
   const [homeworkSubmissions, setHomeworkSubmissions] = useState<Record<string, any>>({});
   const [homeworkGrades, setHomeworkGrades] = useState<Record<string, any>>({});
   const [isHomeworkModalOpen, setIsHomeworkModalOpen] = useState(false);
-  const [newHomeworkForm, setNewHomeworkForm] = useState({ title: '', max_score: 100 });
+  const [newHomeworkForm, setNewHomeworkForm] = useState({ title: '', max_score: 100, due_date: '' });
   
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAttendanceLoaded, setIsAttendanceLoaded] = useState(false);
   const [formError, setFormError] = useState('');
 
   // Automation states
@@ -111,27 +112,38 @@ export const TeacherGroupDetails: React.FC = () => {
     return () => clearInterval(interval);
   }, [group]);
 
+  const autoSavedRef = React.useRef<Record<string, boolean>>({});
+
   // Avtomatik saqlash effekti (dars o'tgan bo'lsa)
   useEffect(() => {
-    if (timeStatus === 'PASSED' && selectedLesson) {
+    if (timeStatus === 'PASSED' && selectedLesson && isAttendanceLoaded) {
       const todayStr = new Date().toISOString().split('T')[0];
-      if (selectedLesson.lesson_date === todayStr) {
-        // Faqat bugungi dars o'tib ketgan bo'lsa, bir marta saqlaymiz
+      if (selectedLesson.lesson_date === todayStr && !isAttendanceSaved && !autoSavedRef.current[selectedLesson.id]) {
+        // Faqat bugungi dars o'tib ketgan bo'lsa va hali saqlanmagan bo'lsa saqlaymiz
+        autoSavedRef.current[selectedLesson.id] = true;
         handleSaveAttendance(true);
       }
     }
-  }, [timeStatus, selectedLesson]);
+  }, [timeStatus, selectedLesson, isAttendanceLoaded, isAttendanceSaved]);
 
   const handleLessonSelect = async (lesson: any) => {
     setSelectedLesson(lesson);
+    setIsAttendanceLoaded(false);
     try {
-      const attRes = await api.get('/attendance/', { params: { lesson_id: lesson.id, limit: 100 } });
+      const attRes = await api.get('/attendance/', { 
+        params: { lesson_id: lesson.id, limit: 100 },
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       const attData = attRes.data.data || [];
       const newState: Record<string, string> = {};
       
       if (attData.length > 0) {
         attData.forEach((att: any) => {
-          newState[att.student_id] = att.status;
+          newState[att.student_id] = att.status.toLowerCase();
         });
         setIsAttendanceSaved(true);
       } else {
@@ -142,6 +154,7 @@ export const TeacherGroupDetails: React.FC = () => {
         setIsAttendanceSaved(false);
       }
       setAttendanceState(newState);
+      setIsAttendanceLoaded(true);
     } catch (e) {
       console.error(e);
     }
@@ -271,6 +284,7 @@ export const TeacherGroupDetails: React.FC = () => {
         lesson_id: selectedLesson.id,
         title: newHomeworkForm.title,
         max_score: newHomeworkForm.max_score,
+        due_date: newHomeworkForm.due_date ? new Date(newHomeworkForm.due_date).toISOString() : null,
       };
       const res = await api.post(`/lessons/${selectedLesson.id}/homework`, payload);
       setCurrentHomework(res.data);
@@ -715,7 +729,7 @@ export const TeacherGroupDetails: React.FC = () => {
                                       </p>
                                     )}
                                     {sub.file_url && (
-                                      <a href={sub.file_url} target="_blank" rel="noreferrer"
+                                      <a href={`http://localhost:8001${sub.file_url}`} target="_blank" rel="noreferrer"
                                         className="text-xs text-blue-400 hover:underline mt-1 inline-block">
                                         📎 Fayl ko'rish
                                       </a>
@@ -737,7 +751,8 @@ export const TeacherGroupDetails: React.FC = () => {
                                   placeholder="Ball"
                                   value={grade.score}
                                   onChange={e => handleGradeChange(student.student_id, 'score', e.target.value)}
-                                  className="w-24 bg-gray-800 border border-gray-700 text-white text-center rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500 font-bold"
+                                  disabled={!!grade.id}
+                                  className="w-24 bg-gray-800 border border-gray-700 text-white text-center rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                                 />
                                 <span className="text-gray-500 text-sm">/ {currentHomework.max_score}</span>
                               </div>
@@ -746,7 +761,8 @@ export const TeacherGroupDetails: React.FC = () => {
                                 placeholder="Izoh (ixtiyoriy)"
                                 value={grade.comment}
                                 onChange={e => handleGradeChange(student.student_id, 'comment', e.target.value)}
-                                className="w-48 bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500 text-sm"
+                                disabled={!!grade.id}
+                                className="w-48 bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                               />
                               {grade.score !== '' && (
                                 <div className={`px-2 py-1 rounded-lg text-xs font-bold ${
@@ -799,6 +815,15 @@ export const TeacherGroupDetails: React.FC = () => {
                   type="number" min="1" max="1000"
                   value={newHomeworkForm.max_score}
                   onChange={e => setNewHomeworkForm({ ...newHomeworkForm, max_score: Number(e.target.value) })}
+                  className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1.5">Topshirish muddati</label>
+                <input
+                  type="datetime-local"
+                  value={newHomeworkForm.due_date}
+                  onChange={e => setNewHomeworkForm({ ...newHomeworkForm, due_date: e.target.value })}
                   className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-purple-500"
                 />
               </div>

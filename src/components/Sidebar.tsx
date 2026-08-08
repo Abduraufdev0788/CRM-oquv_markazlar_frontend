@@ -9,7 +9,8 @@ import {
   Calendar, 
   BookOpen, 
   Settings,
-  Camera
+  Camera,
+  ClipboardList
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -29,6 +30,7 @@ const teacherLinks = [
   { path: '/teacher/groups', label: 'Guruhlarim', icon: Users },
   { path: '/teacher/schedule', label: 'Dars jadvali', icon: Calendar },
   { path: '/teacher/materials', label: 'Materiallar', icon: BookOpen },
+  { path: '/teacher/tests', label: 'Testlar', icon: ClipboardList },
 ];
 
 const studentLinks = [
@@ -38,13 +40,28 @@ const studentLinks = [
   { path: '/student/materials', label: 'Materiallar', icon: BookOpen },
 ];
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   const { role } = useAuthStore();
   
   const links = role === 'admin' ? adminLinks : role === 'teacher' ? teacherLinks : studentLinks;
 
   return (
-    <aside className="w-64 bg-gray-900 border-r border-gray-800 h-screen flex flex-col fixed left-0 top-0">
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          onClick={onClose}
+        ></div>
+      )}
+      
+      {/* Sidebar */}
+      <aside className={`w-64 bg-gray-900 border-r border-gray-800 h-screen flex flex-col fixed left-0 top-0 z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
       <div className="h-16 flex items-center px-6 border-b border-gray-800">
         <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mr-3 shadow-lg shadow-blue-500/20">
           <GraduationCap className="text-white w-5 h-5" />
@@ -76,5 +93,6 @@ export const Sidebar: React.FC = () => {
         })}
       </div>
     </aside>
+    </>
   );
 };

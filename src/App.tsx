@@ -16,7 +16,13 @@ import { FaceID } from './pages/admin/FaceID';
 import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
 import { TeacherGroups } from './pages/teacher/TeacherGroups';
 import { TeacherGroupDetails } from './pages/teacher/TeacherGroupDetails';
+import { TeacherSchedule } from './pages/teacher/TeacherSchedule';
+import { TeacherMaterials } from './pages/teacher/TeacherMaterials';
+import { TeacherTests } from './pages/teacher/TeacherTests';
+import { TeacherTestCreate } from './pages/teacher/TeacherTestCreate';
+import { TeacherTestDetails } from './pages/teacher/TeacherTestDetails';
 import { StudentDashboard } from './pages/student/StudentDashboard';
+import { StudentSchedule } from './pages/student/StudentSchedule';
 
 const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, allowedRole: string }) => {
   const { token, role } = useAuthStore();
@@ -86,13 +92,21 @@ function App() {
                   <Route index element={<TeacherDashboard />} />
                   <Route path="groups" element={<TeacherGroups />} />
                   <Route path="groups/:id" element={<TeacherGroupDetails />} />
+                  <Route path="schedule" element={<TeacherSchedule />} />
+                  <Route path="materials" element={<TeacherMaterials />} />
+                  <Route path="tests" element={<TeacherTests />} />
+                  <Route path="tests/create" element={<TeacherTestCreate />} />
+                  <Route path="tests/:id" element={<TeacherTestDetails />} />
                 </Routes>
               </ProtectedRoute>
             } />
             
             <Route path="/student/*" element={
               <ProtectedRoute allowedRole="student">
-                <StudentDashboard />
+                <Routes>
+                  <Route index element={<StudentDashboard />} />
+                  <Route path="schedule" element={<StudentSchedule />} />
+                </Routes>
               </ProtectedRoute>
             } />
           </Route>

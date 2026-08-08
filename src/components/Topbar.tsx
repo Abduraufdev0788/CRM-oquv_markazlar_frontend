@@ -2,7 +2,11 @@ import React from 'react';
 import { useAuthStore } from '../store/authStore';
 import { LogOut, Bell, Search, Menu } from 'lucide-react';
 
-export const Topbar: React.FC = () => {
+interface TopbarProps {
+  onMenuClick: () => void;
+}
+
+export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
   const { role, logout } = useAuthStore();
 
   const handleLogout = () => {
@@ -10,9 +14,9 @@ export const Topbar: React.FC = () => {
   };
 
   return (
-    <header className="h-16 bg-gray-900/50 backdrop-blur-md border-b border-gray-800 flex items-center justify-between px-6 sticky top-0 z-10">
+    <header className="h-16 bg-gray-900/50 backdrop-blur-md border-b border-gray-800 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-10">
       <div className="flex items-center gap-4">
-        <button className="lg:hidden text-gray-400 hover:text-white">
+        <button onClick={onMenuClick} className="lg:hidden text-gray-400 hover:text-white p-1">
           <Menu className="w-6 h-6" />
         </button>
         <div className="relative hidden sm:block">

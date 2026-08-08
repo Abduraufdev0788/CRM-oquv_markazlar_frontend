@@ -15,7 +15,7 @@ export const Settings: React.FC = () => {
   const [courseForm, setCourseForm] = useState({ name: '', monthly_fee: '', color_hex: '#4F46E5' });
   const [roomForm, setRoomForm] = useState({ name: '', capacity: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
-  
+
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -137,23 +137,21 @@ export const Settings: React.FC = () => {
           <div className="flex space-x-2 p-1 bg-gray-900/50 rounded-xl">
             <button
               onClick={() => setActiveTab('courses')}
-              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                activeTab === 'courses' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
-              }`}
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'courses' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                }`}
             >
               <BookOpen className="w-4 h-4" /> Kurslar
             </button>
             <button
               onClick={() => setActiveTab('rooms')}
-              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                activeTab === 'rooms' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
-              }`}
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'rooms' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                }`}
             >
               <MapPin className="w-4 h-4" /> Xonalar
             </button>
           </div>
-          
-          <button 
+
+          <button
             onClick={handleCreate}
             className="bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 border border-blue-500/30"
           >
@@ -161,7 +159,7 @@ export const Settings: React.FC = () => {
             Yangi {activeTab === 'courses' ? 'Kurs' : 'Xona'}
           </button>
         </div>
-        
+
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {loading ? (
@@ -173,7 +171,9 @@ export const Settings: React.FC = () => {
                 <div key={item.id} className="bg-gray-900/50 border border-gray-700 rounded-xl p-5 hover:border-gray-500 transition-colors group">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
-                      {activeTab === 'courses' ? (
+                      01
+                      Jahongir Evodullayev
+                      2-xona{activeTab === 'courses' ? (
                         <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${item.color_hex}20`, color: item.color_hex }}>
                           <BookOpen className="w-5 h-5" />
                         </div>
@@ -218,17 +218,17 @@ export const Settings: React.FC = () => {
               {formError && <div className="p-3 bg-red-500/10 text-red-400 text-sm rounded-lg text-center">{formError}</div>}
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1.5">Kurs nomi</label>
-                <input type="text" required value={courseForm.name} onChange={e => setCourseForm({...courseForm, name: e.target.value})} className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:border-blue-500" placeholder="IELTS Preparation" />
+                <input type="text" required value={courseForm.name} onChange={e => setCourseForm({ ...courseForm, name: e.target.value })} className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:border-blue-500" placeholder="IELTS Preparation" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1.5">Oylik to'lov (UZS)</label>
-                <input type="number" required value={courseForm.monthly_fee} onChange={e => setCourseForm({...courseForm, monthly_fee: e.target.value})} className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:border-blue-500" placeholder="Masalan: 400000" />
+                <input type="number" required value={courseForm.monthly_fee} onChange={e => setCourseForm({ ...courseForm, monthly_fee: e.target.value })} className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:border-blue-500" placeholder="Masalan: 400000" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1.5">Kurs rangi (Hex)</label>
                 <div className="flex gap-2">
-                  <input type="color" value={courseForm.color_hex} onChange={e => setCourseForm({...courseForm, color_hex: e.target.value})} className="w-12 h-11 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer" />
-                  <input type="text" required value={courseForm.color_hex} onChange={e => setCourseForm({...courseForm, color_hex: e.target.value})} className="flex-1 bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:border-blue-500 font-mono" placeholder="#4F46E5" />
+                  <input type="color" value={courseForm.color_hex} onChange={e => setCourseForm({ ...courseForm, color_hex: e.target.value })} className="w-12 h-11 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer" />
+                  <input type="text" required value={courseForm.color_hex} onChange={e => setCourseForm({ ...courseForm, color_hex: e.target.value })} className="flex-1 bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:border-blue-500 font-mono" placeholder="#4F46E5" />
                 </div>
               </div>
               <div className="pt-4"><button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold transition-colors disabled:opacity-50">Saqlash</button></div>
@@ -251,11 +251,11 @@ export const Settings: React.FC = () => {
               {formError && <div className="p-3 bg-red-500/10 text-red-400 text-sm rounded-lg text-center">{formError}</div>}
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1.5">Xona nomi</label>
-                <input type="text" required value={roomForm.name} onChange={e => setRoomForm({...roomForm, name: e.target.value})} className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:border-blue-500" placeholder="1-xona" />
+                <input type="text" required value={roomForm.name} onChange={e => setRoomForm({ ...roomForm, name: e.target.value })} className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:border-blue-500" placeholder="1-xona" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1.5">Sig'imi (O'quvchi soni)</label>
-                <input type="number" required value={roomForm.capacity} onChange={e => setRoomForm({...roomForm, capacity: e.target.value})} className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:border-blue-500" placeholder="Masalan: 15" />
+                <input type="number" required value={roomForm.capacity} onChange={e => setRoomForm({ ...roomForm, capacity: e.target.value })} className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:border-blue-500" placeholder="Masalan: 15" />
               </div>
               <div className="pt-4"><button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold transition-colors disabled:opacity-50">Saqlash</button></div>
             </form>
