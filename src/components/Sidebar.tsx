@@ -10,7 +10,8 @@ import {
   BookOpen, 
   Settings,
   Camera,
-  ClipboardList
+  ClipboardList,
+  Bell
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -21,6 +22,7 @@ const adminLinks = [
   { path: '/admin/students', label: 'O\'quvchilar', icon: GraduationCap },
   { path: '/admin/groups', label: 'Guruhlar', icon: BookOpen },
   { path: '/admin/finance', label: 'Moliya', icon: Wallet },
+  { path: '/admin/notifications', label: 'Xabarnomalar', icon: Bell },
   { path: '/admin/face-id', label: 'Face ID & IoT', icon: Camera },
   { path: '/admin/settings', label: 'Sozlamalar', icon: Settings },
 ];

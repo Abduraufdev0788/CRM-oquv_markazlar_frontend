@@ -137,9 +137,7 @@ export const TeacherGroups: React.FC = () => {
                           className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider text-white"
                           style={{ backgroundColor: `${courseColor}40`, border: `1px solid ${courseColor}80` }}
                         >
-                          {group.cours01
-Jahongir Evodullayev
-2-xonae?.name || "Noma'lum kurs"}
+                          {group.course?.name || "Noma'lum kurs"}
                         </span>
                       </div>
                       <h3 className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors line-clamp-1">

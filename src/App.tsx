@@ -12,6 +12,7 @@ import { GroupDetails } from './pages/admin/GroupDetails';
 import { Finance } from './pages/admin/Finance';
 import { Settings } from './pages/admin/Settings';
 import { FaceID } from './pages/admin/FaceID';
+import { Notifications } from './pages/admin/Notifications';
 
 import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
 import { TeacherGroups } from './pages/teacher/TeacherGroups';
@@ -22,7 +23,9 @@ import { TeacherTests } from './pages/teacher/TeacherTests';
 import { TeacherTestCreate } from './pages/teacher/TeacherTestCreate';
 import { TeacherTestDetails } from './pages/teacher/TeacherTestDetails';
 import { StudentDashboard } from './pages/student/StudentDashboard';
+import { StudentMaterials } from './pages/student/StudentMaterials';
 import { StudentSchedule } from './pages/student/StudentSchedule';
+import { Profile } from './pages/common/Profile';
 
 const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, allowedRole: string }) => {
   const { token, role } = useAuthStore();
@@ -84,6 +87,16 @@ function App() {
                   <FaceID />
                 </ProtectedRoute>
               } />
+              <Route path="notifications" element={
+                <ProtectedRoute allowedRole="admin">
+                  <Notifications />
+                </ProtectedRoute>
+              } />
+              <Route path="profile" element={
+                <ProtectedRoute allowedRole="admin">
+                  <Profile />
+                </ProtectedRoute>
+              } />
             </Route>
             
             <Route path="/teacher/*" element={
@@ -97,6 +110,7 @@ function App() {
                   <Route path="tests" element={<TeacherTests />} />
                   <Route path="tests/create" element={<TeacherTestCreate />} />
                   <Route path="tests/:id" element={<TeacherTestDetails />} />
+                  <Route path="profile" element={<Profile />} />
                 </Routes>
               </ProtectedRoute>
             } />
@@ -106,6 +120,8 @@ function App() {
                 <Routes>
                   <Route index element={<StudentDashboard />} />
                   <Route path="schedule" element={<StudentSchedule />} />
+                  <Route path="materials" element={<StudentMaterials />} />
+                  <Route path="profile" element={<Profile />} />
                 </Routes>
               </ProtectedRoute>
             } />
