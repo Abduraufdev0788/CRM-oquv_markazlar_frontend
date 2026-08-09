@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { 
   LayoutDashboard, 
@@ -40,6 +41,7 @@ const studentLinks = [
   { path: '/student/schedule', label: 'Dars jadvali', icon: Calendar },
   { path: '/student/finance', label: 'To\'lovlarim', icon: Wallet },
   { path: '/student/materials', label: 'Materiallar', icon: BookOpen },
+  { path: '/student/tests', label: 'Testlar', icon: ClipboardList },
 ];
 
 interface SidebarProps {
@@ -49,7 +51,16 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   const { role } = useAuthStore();
+  const [emptyRooms, setEmptyRooms] = useState<number | null>(null);
   
+  useEffect(() => {
+    if (role === 'admin') {
+      api.get('/rooms/', { params: { available_now: true, limit: 1 } })
+        .then(res => setEmptyRooms(res.data.total))
+        .catch(console.error);
+    }
+  }, [role]);
+
   const links = role === 'admin' ? adminLinks : role === 'teacher' ? teacherLinks : studentLinks;
 
   return (
@@ -89,7 +100,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
               )}
             >
               <Icon className="w-5 h-5 mr-3 opacity-80" />
-              {link.label}
+              <span className="flex-1">{link.label}</span>
+              {link.label === 'Sozlamalar' && emptyRooms !== null && (
+                <span className="ml-auto bg-green-500/20 text-green-400 py-0.5 px-2 rounded-full text-xs font-bold border border-green-500/30">
+                  {emptyRooms} ta bo'sh
+                </span>
+              )}
             </NavLink>
           );
         })}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, AlertCircle, FileText, CheckCircle2, Sparkles } from 'lucide-react';
 import { api } from '../../services/api';
 
@@ -10,10 +10,12 @@ interface Question {
   correct_answer: number | null;
 }
 
-export const TeacherTestCreate: React.FC = () => {
+export const TeacherTestEdit: React.FC = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [groups, setGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   
   const [formData, setFormData] = useState({
     group_id: '',
@@ -26,20 +28,76 @@ export const TeacherTestCreate: React.FC = () => {
     max_attempts: 1
   });
   
-  const [questions, setQuestions] = useState<Question[]>([
-    { text: '', type: 'choice', options: ['', '', '', ''], correct_answer: null }
-  ]);
+  const [questions, setQuestions] = useState<Question[]>([]);
   
   const [error, setError] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const toLocalISOString = (dateString: string) => {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '';
+    const localDate = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return localDate.toISOString().slice(0, 16);
+  };
+
   useEffect(() => {
-    api.get('/groups/', { params: { limit: 100 } })
-      .then(res => setGroups(res.data.data || []))
-      .catch(err => console.error(err));
-  }, []);
+    const loadData = async () => {
+      try {
+        const groupsRes = await api.get('/groups/', { params: { limit: 100 } });
+        setGroups(groupsRes.data.data || []);
+        
+        if (id) {
+          const testRes = await api.get(`/tests/${id}`);
+          const data = testRes.data;
+          setFormData({
+            group_id: data.group_id || '',
+            title: data.title || '',
+            description: data.description || '',
+            max_score: data.max_score || 100,
+            is_active: data.is_active,
+            start_time: toLocalISOString(data.start_time),
+            end_time: toLocalISOString(data.end_time),
+            max_attempts: data.max_attempts || 1
+          });
+          if (data.questions && data.questions.length > 0) {
+            const safeQuestions = data.questions.map((q: any) => {
+              let parsedOptions = ['', '', '', ''];
+              if (Array.isArray(q.options) && q.options.length > 0) {
+                parsedOptions = [...q.options];
+                while(parsedOptions.length < 4) parsedOptions.push('');
+                if (parsedOptions.length > 4) parsedOptions = parsedOptions.slice(0, 4);
+              }
+              
+              let parsedCorrect = null;
+              if (q.correct_answer !== undefined && q.correct_answer !== null) {
+                 const num = Number(q.correct_answer);
+                 if (!isNaN(num)) parsedCorrect = num;
+              }
+
+              return {
+                text: q.text || '',
+                type: q.type || 'choice',
+                options: parsedOptions,
+                correct_answer: parsedCorrect
+              };
+            });
+            setQuestions(safeQuestions);
+          } else {
+            setQuestions([{ text: '', type: 'choice', options: ['', '', '', ''], correct_answer: null }]);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        setError("Ma'lumotlarni yuklashda xatolik yuz berdi");
+      } finally {
+        setFetching(false);
+      }
+    };
+    loadData();
+  }, [id]);
 
   const handleAddQuestion = () => {
     setQuestions([...questions, { text: '', type: 'choice', options: ['', '', '', ''], correct_answer: null }]);
@@ -113,7 +171,6 @@ export const TeacherTestCreate: React.FC = () => {
       return;
     }
 
-    // Validate questions
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
       if (!q.text.trim()) {
@@ -137,7 +194,7 @@ export const TeacherTestCreate: React.FC = () => {
 
     setLoading(true);
     try {
-      await api.post('/tests/', {
+      await api.put(`/tests/${id}`, {
         ...formData,
         start_time: formData.start_time ? new Date(formData.start_time).toISOString() : null,
         end_time: formData.end_time ? new Date(formData.end_time).toISOString() : null,
@@ -152,6 +209,14 @@ export const TeacherTestCreate: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (fetching) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-6 animate-in fade-in duration-500">
@@ -169,9 +234,9 @@ export const TeacherTestCreate: React.FC = () => {
             </button>
             <div>
               <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-                <FileText className="w-6 h-6 text-indigo-400" /> Yangi Test Yaratish
+                <FileText className="w-6 h-6 text-indigo-400" /> Testni Tahrirlash
               </h2>
-              <p className="text-gray-400 text-sm mt-1">Savollar, variantlar va to'g'ri javoblarni kiritib o'z onlayn testingizni yarating.</p>
+              <p className="text-gray-400 text-sm mt-1">Mavjud test savollari va ma'lumotlarini o'zgartiring.</p>
             </div>
           </div>
           
@@ -377,7 +442,7 @@ export const TeacherTestCreate: React.FC = () => {
                       </div>
                       <input 
                         type="text"
-                        value={opt}
+                        value={opt || ''}
                         onChange={e => handleOptionChange(qIndex, optIndex, e.target.value)}
                         className="flex-1 bg-transparent border-none text-white focus:outline-none text-sm p-2 placeholder:text-gray-600"
                         placeholder={`${['A', 'B', 'C', 'D'][optIndex]} variant...`}

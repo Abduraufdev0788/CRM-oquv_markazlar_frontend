@@ -22,9 +22,12 @@ import { TeacherMaterials } from './pages/teacher/TeacherMaterials';
 import { TeacherTests } from './pages/teacher/TeacherTests';
 import { TeacherTestCreate } from './pages/teacher/TeacherTestCreate';
 import { TeacherTestDetails } from './pages/teacher/TeacherTestDetails';
+import { TeacherTestEdit } from './pages/teacher/TeacherTestEdit';
 import { StudentDashboard } from './pages/student/StudentDashboard';
 import { StudentMaterials } from './pages/student/StudentMaterials';
 import { StudentSchedule } from './pages/student/StudentSchedule';
+import { StudentTests } from './pages/student/StudentTests';
+import { StudentTestTake } from './pages/student/StudentTestTake';
 import { Profile } from './pages/common/Profile';
 
 const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, allowedRole: string }) => {
@@ -110,6 +113,7 @@ function App() {
                   <Route path="tests" element={<TeacherTests />} />
                   <Route path="tests/create" element={<TeacherTestCreate />} />
                   <Route path="tests/:id" element={<TeacherTestDetails />} />
+                  <Route path="tests/:id/edit" element={<TeacherTestEdit />} />
                   <Route path="profile" element={<Profile />} />
                 </Routes>
               </ProtectedRoute>
@@ -121,6 +125,8 @@ function App() {
                   <Route index element={<StudentDashboard />} />
                   <Route path="schedule" element={<StudentSchedule />} />
                   <Route path="materials" element={<StudentMaterials />} />
+                  <Route path="tests" element={<StudentTests />} />
+                  <Route path="tests/:id" element={<StudentTestTake />} />
                   <Route path="profile" element={<Profile />} />
                 </Routes>
               </ProtectedRoute>

@@ -4,6 +4,7 @@ import { BookOpen, MapPin, Plus, Edit2, Trash2, X } from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'courses' | 'rooms'>('courses');
+  const [availableNow, setAvailableNow] = useState(false);
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,7 +24,11 @@ export const Settings: React.FC = () => {
     try {
       setLoading(true);
       const endpoint = activeTab === 'courses' ? '/courses/' : '/rooms/';
-      const response = await api.get(endpoint, { params: { limit: 50 } });
+      const params: any = { limit: 50 };
+      if (activeTab === 'rooms' && availableNow) {
+        params.available_now = true;
+      }
+      const response = await api.get(endpoint, { params });
       setData(response.data.data || []);
     } catch (error) {
       console.error("Sozlamalar yuklanmadi", error);
@@ -34,7 +39,7 @@ export const Settings: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab]);
+  }, [activeTab, availableNow]);
 
   const handleCourseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,13 +156,25 @@ export const Settings: React.FC = () => {
             </button>
           </div>
 
-          <button
-            onClick={handleCreate}
-            className="bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 border border-blue-500/30"
-          >
-            <Plus className="w-4 h-4" />
-            Yangi {activeTab === 'courses' ? 'Kurs' : 'Xona'}
-          </button>
+          <div className="flex gap-4 items-center">
+            {activeTab === 'rooms' && (
+              <label className="flex items-center cursor-pointer gap-2 mr-2">
+                <span className="text-sm text-gray-300 font-medium">Hozirda bo'sh</span>
+                <div className="relative">
+                  <input type="checkbox" className="sr-only" checked={availableNow} onChange={e => setAvailableNow(e.target.checked)} />
+                  <div className={`block w-10 h-6 rounded-full transition-colors ${availableNow ? 'bg-blue-500' : 'bg-gray-600'}`}></div>
+                  <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${availableNow ? 'transform translate-x-4' : ''}`}></div>
+                </div>
+              </label>
+            )}
+            <button
+              onClick={handleCreate}
+              className="bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 border border-blue-500/30"
+            >
+              <Plus className="w-4 h-4" />
+              Yangi {activeTab === 'courses' ? 'Kurs' : 'Xona'}
+            </button>
+          </div>
         </div>
 
         <div className="p-6">
@@ -171,9 +188,7 @@ export const Settings: React.FC = () => {
                 <div key={item.id} className="bg-gray-900/50 border border-gray-700 rounded-xl p-5 hover:border-gray-500 transition-colors group">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
-                      01
-                      Jahongir Evodullayev
-                      2-xona{activeTab === 'courses' ? (
+                      {activeTab === 'courses' ? (
                         <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${item.color_hex}20`, color: item.color_hex }}>
                           <BookOpen className="w-5 h-5" />
                         </div>

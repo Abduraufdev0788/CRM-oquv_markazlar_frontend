@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, Plus, Search, Trash2, Edit2, PlayCircle, Users } from 'lucide-react';
+import { ClipboardList, Plus, Search, Trash2, Edit2, PlayCircle, Users, Power } from 'lucide-react';
 import { api } from '../../services/api';
 
 export const TeacherTests: React.FC = () => {
@@ -32,6 +32,16 @@ export const TeacherTests: React.FC = () => {
       fetchTests();
     } catch (error) {
       console.error("Failed to delete test", error);
+      alert("Xatolik yuz berdi");
+    }
+  };
+
+  const handleToggleActive = async (test: any) => {
+    try {
+      await api.put(`/tests/${test.id}`, { is_active: !test.is_active });
+      fetchTests();
+    } catch (error) {
+      console.error("Failed to toggle test status", error);
       alert("Xatolik yuz berdi");
     }
   };
@@ -115,6 +125,20 @@ export const TeacherTests: React.FC = () => {
                       title="Natijalarni ko'rish"
                     >
                       <Users className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleToggleActive(test)}
+                      className={`p-2 rounded-lg transition-colors ${test.is_active ? 'text-orange-400 hover:bg-orange-400/10' : 'text-green-400 hover:bg-green-400/10'}`}
+                      title={test.is_active ? "Testni Yopish" : "Testni Ochish"}
+                    >
+                      <Power className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => navigate(`/teacher/tests/${test.id}/edit`)}
+                      className="p-2 text-yellow-400 hover:bg-yellow-400/10 rounded-lg transition-colors"
+                      title="Tahrirlash"
+                    >
+                      <Edit2 className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => handleDelete(test.id)}

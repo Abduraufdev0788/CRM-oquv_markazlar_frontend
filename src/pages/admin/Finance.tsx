@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
-import { Wallet, TrendingDown, Plus, Search, CheckCircle, XCircle, FileText, Banknote, Clock } from 'lucide-react';
+import { Wallet, TrendingDown, Plus, Search, CheckCircle, XCircle, FileText, Banknote, Clock, AlertCircle } from 'lucide-react';
 import { SearchableSelect } from '../../components/SearchableSelect';
 
 export const Finance: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'payments' | 'expenses' | 'salaries'>('payments');
+  const [activeTab, setActiveTab] = useState<'payments' | 'expenses' | 'salaries' | 'debtors'>('payments');
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -60,18 +60,28 @@ export const Finance: React.FC = () => {
       setLoading(true);
       setData([]); // Oldingi ma'lumotlarni tozalash (Crashes oldini oladi)
       let endpoint = '';
+      let isDebtors = false;
       if (activeTab === 'payments') endpoint = '/finance/payments/';
       else if (activeTab === 'expenses') endpoint = '/finance/expenses/';
       else if (activeTab === 'salaries') endpoint = '/finance/salaries/';
+      else if (activeTab === 'debtors') {
+        endpoint = '/reports/debtors';
+        isDebtors = true;
+      }
 
       const response = await api.get(endpoint, {
-        params: { 
+        params: isDebtors ? { month: month, year: year } : { 
           limit: 50, 
           period_month: month, 
           period_year: year 
         }
       });
-      setData(response.data.data);
+      
+      if (isDebtors) {
+        setData(response.data.debtors || []);
+      } else {
+        setData(response.data.data || []);
+      }
     } catch (error) {
       console.error("Moliya datasi yuklanmadi", error);
     } finally {
@@ -298,6 +308,14 @@ export const Finance: React.FC = () => {
             >
               Maoshlar
             </button>
+            <button
+              onClick={() => setActiveTab('debtors')}
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-300 whitespace-nowrap ${
+                activeTab === 'debtors' ? 'bg-red-600 text-white shadow-md scale-105' : 'text-red-400/70 hover:text-red-400 hover:bg-red-500/10'
+              }`}
+            >
+              To'lamaganlar
+            </button>
           </div>
           
           <div className="flex gap-3">
@@ -445,6 +463,53 @@ export const Finance: React.FC = () => {
                             <Clock className="w-4 h-4" /> To'lash
                           </button>
                         )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
+
+          {activeTab === 'debtors' && (
+            <table className="w-full text-left text-sm text-gray-400">
+              <thead className="bg-gray-900/50 text-gray-300 uppercase font-medium">
+                <tr>
+                  <th className="px-6 py-4">F.I.O</th>
+                  <th className="px-6 py-4">Guruhlari</th>
+                  <th className="px-6 py-4">Telefon</th>
+                  <th className="px-6 py-4">Balans (Qarz)</th>
+                  <th className="px-6 py-4">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700/50">
+                {loading ? (
+                  <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">Yuklanmoqda...</td></tr>
+                ) : data.length === 0 ? (
+                  <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">Bu oy uchun qarzdorlar topilmadi! Barcha o'quvchilar to'lov qilgan.</td></tr>
+                ) : (
+                  data.map((item: any) => (
+                    <tr key={item.id} className="hover:bg-gray-700/30 transition-colors">
+                      <td className="px-6 py-4 text-white font-medium">{item.full_name}</td>
+                      <td className="px-6 py-4">
+                        {item.groups && item.groups.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {item.groups.map((gName: string, idx: number) => (
+                              <span key={idx} className="bg-gray-800 text-gray-300 text-xs px-2 py-1 rounded-md border border-gray-700">
+                                {gName}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-500 text-xs">Guruhsiz</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">{item.phone}</td>
+                      <td className="px-6 py-4 text-red-400 font-bold">{formatCurrency(item.balance)}</td>
+                      <td className="px-6 py-4">
+                        <span className="flex items-center gap-1.5 text-xs font-medium text-red-400 bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20 w-max">
+                          <AlertCircle className="w-4 h-4" /> To'lamagan
+                        </span>
                       </td>
                     </tr>
                   ))
