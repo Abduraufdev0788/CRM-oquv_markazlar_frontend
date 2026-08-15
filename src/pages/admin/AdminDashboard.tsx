@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Users, GraduationCap, Wallet, TrendingUp, Activity, BookOpen, AlertCircle, Star, Award } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadialBarChart, RadialBar, BarChart, Bar } from 'recharts';
 import { api } from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
 
 const StatCard = ({ title, value, icon: Icon, trend, isCurrency = false, colorClass = "text-blue-400", bgClass = "bg-blue-500/20" }: { title: string, value: string | number, icon: any, trend?: string, isCurrency?: boolean, colorClass?: string, bgClass?: string }) => {
   const formattedValue = isCurrency && typeof value === 'number' 
@@ -30,6 +32,7 @@ const StatCard = ({ title, value, icon: Icon, trend, isCurrency = false, colorCl
 };
 
 export const AdminDashboard: React.FC = () => {
+  const { role } = useAuthStore();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -62,7 +65,7 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
       <div>
-        <h2 className="text-2xl font-bold text-white tracking-tight">Xush kelibsiz, Admin! 👋</h2>
+        <h2 className="text-2xl font-bold text-white tracking-tight">Xush kelibsiz, {role === 'manager' ? 'Menejer' : 'Admin'}! 👋</h2>
         <p className="text-gray-400 mt-1">Bugungi statistika va muhim ko'rsatkichlar.</p>
       </div>
 
@@ -75,41 +78,45 @@ export const AdminDashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Daromad Dinamikasi (Bar Chart) */}
+        {/* Daromad Dinamikasi (Area Chart) */}
         <div className="lg:col-span-2 bg-gray-800/50 backdrop-blur-md border border-gray-700 p-6 rounded-2xl shadow-xl flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-semibold text-white">Daromad Dinamikasi (Oxirgi 6 oy)</h3>
-            <div className="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-medium border border-emerald-500/20 flex items-center gap-1">
-              <TrendingUp className="w-3 h-3" />
-              Sof foyda: {new Intl.NumberFormat('uz-UZ', { style: 'currency', currency: 'UZS', maximumFractionDigits: 0 }).format(stats?.net_profit || 0)}
-            </div>
+            {role !== 'manager' && (
+              <div className="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-medium border border-emerald-500/20 flex items-center gap-1">
+                <TrendingUp className="w-3 h-3" />
+                Sof foyda: {new Intl.NumberFormat('uz-UZ', { style: 'currency', currency: 'UZS', maximumFractionDigits: 0 }).format(stats?.net_profit || 0)}
+              </div>
+            )}
           </div>
           
-          <div className="flex-1 flex items-end gap-2 sm:gap-4 mt-4 h-64">
-            {trendData.map((item: any, i: number) => {
-              const heightPercent = Math.max((item.income / maxIncome) * 100, 2);
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center group relative h-full justify-end">
-                  {/* Tooltip */}
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-10 bg-gray-900 text-white text-xs py-1 px-2 rounded border border-gray-700 whitespace-nowrap pointer-events-none z-10">
-                    {new Intl.NumberFormat('uz-UZ', { style: 'currency', currency: 'UZS', maximumFractionDigits: 0 }).format(item.income)}
-                  </div>
-                  {/* Bar */}
-                  <div 
-                    className="w-full bg-gradient-to-t from-blue-600 to-blue-400 rounded-t-md transition-all duration-1000 ease-out group-hover:from-blue-500 group-hover:to-blue-300"
-                    style={{ height: `${heightPercent}%` }}
-                  ></div>
-                  <span className="text-gray-400 text-xs mt-3 font-medium uppercase tracking-wider">{item.month}</span>
-                </div>
-              );
-            })}
+          <div className="flex-1 mt-4 h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+                <XAxis dataKey="month" stroke="#9ca3af" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} />
+                <YAxis stroke="#9ca3af" axisLine={false} tickLine={false} tickFormatter={(val) => `${val / 1000000}M`} tick={{ fontSize: 12, fill: '#9ca3af' }} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', borderRadius: '0.5rem', color: '#fff' }}
+                  itemStyle={{ color: '#60a5fa', fontWeight: 'bold' }}
+                  formatter={(value: number) => new Intl.NumberFormat('uz-UZ', { style: 'currency', currency: 'UZS', maximumFractionDigits: 0 }).format(value)}
+                />
+                <Area type="monotone" dataKey="income" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Bugungi darslar va Davomat */}
+        {/* Bugungi darslar va Davomat (Radial Chart) */}
         <div className="bg-gray-800/50 backdrop-blur-md border border-gray-700 p-6 rounded-2xl flex flex-col gap-6 shadow-xl">
           <div>
-            <h3 className="text-lg font-semibold text-white mb-4">Bugungi darslar</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">Bugungi holat</h3>
             <div className="flex items-center gap-4 bg-purple-500/10 p-5 rounded-xl border border-purple-500/20">
               <div className="p-4 bg-purple-500/20 rounded-xl shadow-inner">
                  <BookOpen className="w-8 h-8 text-purple-400" />
@@ -123,16 +130,79 @@ export const AdminDashboard: React.FC = () => {
           
           <div className="flex-1 bg-gray-900/40 rounded-xl p-5 border border-gray-700/50 flex flex-col justify-center items-center relative overflow-hidden">
              <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-bl-full blur-2xl"></div>
-             <Activity className="w-8 h-8 text-emerald-400 mb-2 opacity-80" />
-             <p className="text-gray-400 text-sm font-medium mb-1">Davomat (Bugun)</p>
-             <div className="flex items-baseline gap-1">
-               <span className="text-4xl font-bold text-emerald-400">{stats?.today_attendance_rate || 0}</span>
-               <span className="text-emerald-500 font-medium">%</span>
+             
+             <div className="h-40 w-full flex justify-center items-center relative">
+               <ResponsiveContainer width="100%" height="100%">
+                 <RadialBarChart 
+                   cx="50%" 
+                   cy="50%" 
+                   innerRadius="70%" 
+                   outerRadius="100%" 
+                   barSize={15} 
+                   data={[{ name: 'Davomat', value: stats?.today_attendance_rate || 0, fill: '#10b981' }]} 
+                   startAngle={90} 
+                   endAngle={-270}
+                 >
+                   <RadialBar background={{ fill: '#374151' }} cornerRadius={10} dataKey="value" />
+                 </RadialBarChart>
+               </ResponsiveContainer>
+               
+               {/* Center Text */}
+               <div className="absolute flex flex-col items-center justify-center pointer-events-none">
+                 <span className="text-3xl font-black text-emerald-400">{stats?.today_attendance_rate || 0}%</span>
+                 <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Davomat</span>
+               </div>
+             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Konversiya / O'sish Grafiklari */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <div className="bg-gray-800/50 backdrop-blur-md border border-gray-700 p-6 rounded-2xl shadow-xl">
+          <h3 className="text-lg font-semibold text-white mb-6">Yangi o'quvchilar o'sishi</h3>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats?.new_students_trend || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+                <XAxis dataKey="name" stroke="#9ca3af" axisLine={false} tickLine={false} />
+                <YAxis stroke="#9ca3af" axisLine={false} tickLine={false} />
+                <Tooltip cursor={{fill: '#1f2937'}} contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', borderRadius: '0.5rem', color: '#fff' }} />
+                <Bar dataKey="count" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        
+        <div className="bg-gray-800/50 backdrop-blur-md border border-gray-700 p-6 rounded-2xl shadow-xl">
+          <h3 className="text-lg font-semibold text-white mb-6">Savdo Voronkasi / Lidlar</h3>
+          <div className="h-64 w-full flex flex-col justify-center gap-4 px-4">
+             <div className="w-full relative group">
+               <div className="flex justify-between text-sm text-gray-300 font-medium mb-1 px-2"><span className="text-blue-400">{stats?.leads_funnel?.[0]?.name || "Yangi Lidlar"}</span><span>{stats?.leads_funnel?.[0]?.count || 0}</span></div>
+               <div className="w-full bg-blue-500/20 h-10 rounded-xl border border-blue-500/30 flex items-center transition-transform hover:scale-[1.02]">
+                 <div className="bg-gradient-to-r from-blue-600 to-blue-400 h-full rounded-xl" style={{width: '100%'}}></div>
+               </div>
              </div>
              
-             {/* Mini progress bar */}
-             <div className="w-full bg-gray-800 rounded-full h-1.5 mt-4 overflow-hidden">
-               <div className="bg-emerald-400 h-1.5 rounded-full transition-all duration-1000" style={{ width: `${stats?.today_attendance_rate || 0}%` }}></div>
+             <div className="w-[85%] mx-auto relative group">
+               <div className="flex justify-between text-sm text-gray-300 font-medium mb-1 px-2"><span className="text-purple-400">{stats?.leads_funnel?.[1]?.name || "Aloqaga chiqildi"}</span><span>{stats?.leads_funnel?.[1]?.count || 0}</span></div>
+               <div className="w-full bg-purple-500/20 h-10 rounded-xl border border-purple-500/30 flex items-center transition-transform hover:scale-[1.02]">
+                 <div className="bg-gradient-to-r from-purple-600 to-purple-400 h-full rounded-xl" style={{width: '100%'}}></div>
+               </div>
+             </div>
+
+             <div className="w-[65%] mx-auto relative group">
+               <div className="flex justify-between text-sm text-gray-300 font-medium mb-1 px-2"><span className="text-yellow-400">{stats?.leads_funnel?.[2]?.name || "Sinov darsida"}</span><span>{stats?.leads_funnel?.[2]?.count || 0}</span></div>
+               <div className="w-full bg-yellow-500/20 h-10 rounded-xl border border-yellow-500/30 flex items-center transition-transform hover:scale-[1.02]">
+                 <div className="bg-gradient-to-r from-yellow-600 to-yellow-400 h-full rounded-xl" style={{width: '100%'}}></div>
+               </div>
+             </div>
+             
+             <div className="w-[45%] mx-auto relative group">
+               <div className="flex justify-between text-sm text-gray-300 font-medium mb-1 px-2"><span className="text-emerald-400">{stats?.leads_funnel?.[3]?.name || "Sotib oldi (Konversiya)"}</span><span>{stats?.leads_funnel?.[3]?.count || 0}</span></div>
+               <div className="w-full bg-emerald-500/20 h-10 rounded-xl border border-emerald-500/30 flex items-center transition-transform hover:scale-[1.02]">
+                 <div className="bg-gradient-to-r from-emerald-600 to-emerald-400 h-full rounded-xl" style={{width: '100%'}}></div>
+               </div>
              </div>
           </div>
         </div>

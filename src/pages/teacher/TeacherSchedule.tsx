@@ -21,9 +21,16 @@ export const TeacherSchedule: React.FC = () => {
       }
     };
     fetchTeacherGroups();
+    // Vaqtni 10 soniyada yangilash (qizil indikator vaqtida chiqishi uchun)
+    const timeInterval = setInterval(() => setCurrentTime(new Date()), 10000);
     
-    const interval = setInterval(() => setCurrentTime(new Date()), 60000);
-    return () => clearInterval(interval);
+    // Ma'lumotlarni har 1 daqiqada orqa fonda yangilash
+    const fetchInterval = setInterval(() => fetchTeacherGroups(), 60000);
+    
+    return () => {
+      clearInterval(timeInterval);
+      clearInterval(fetchInterval);
+    };
   }, []);
 
   if (loading) {

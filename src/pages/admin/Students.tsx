@@ -1,20 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { Search, Plus, UserPlus, X, Edit2, Trash2, RefreshCcw } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
 
 interface Student {
   id: string;
   full_name: string;
   phone: string;
   status: string;
-  face_data_id?: string;
   created_at?: string;
 }
 
 export const Students: React.FC = () => {
+  const { role } = useAuthStore();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const location = window.location;
+  const urlParams = new URLSearchParams(location.search);
+  const initialSearch = urlParams.get('q') || '';
+  const [search, setSearch] = useState(initialSearch);
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,8 +26,7 @@ export const Students: React.FC = () => {
     full_name: '',
     phone: '+998',
     birth_date: '',
-    status: 'active',
-    face_data_id: ''
+    status: 'active'
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formError, setFormError] = useState('');
@@ -33,7 +36,7 @@ export const Students: React.FC = () => {
     try {
       setLoading(true);
       const response = await api.get('/students/', {
-        params: { search, limit: 50 }
+        params: { search, limit: 1000 }
       });
       setStudents(response.data.data);
     } catch (error) {
@@ -59,8 +62,7 @@ export const Students: React.FC = () => {
       const payload = { 
         ...formData, 
         phone: formData.phone && formData.phone !== '+998' ? formData.phone : null,
-        birth_date: formData.birth_date || null,
-        face_data_id: formData.face_data_id || null 
+        birth_date: formData.birth_date || null
       };
       if (editingId) {
         await api.put(`/students/${editingId}`, payload);
@@ -69,7 +71,7 @@ export const Students: React.FC = () => {
       }
       setIsModalOpen(false);
       fetchStudents();
-      setFormData({ full_name: '', phone: '+998', birth_date: '', status: 'active', face_data_id: '' });
+      setFormData({ full_name: '', phone: '+998', birth_date: '', status: 'active' });
       setEditingId(null);
     } catch (err: any) {
       const detail = err.response?.data?.detail;
@@ -87,20 +89,36 @@ export const Students: React.FC = () => {
     }
   };
 
-  const handleEdit = (student: Student) => {
-    setFormData({
-      full_name: student.full_name,
-      phone: student.phone || '',
-      birth_date: (student as any).birth_date || '',
-      status: student.status,
-      face_data_id: student.face_data_id || ''
-    });
-    setEditingId(student.id);
-    setIsModalOpen(true);
+  const handleEdit = async (student: Student) => {
+    try {
+      // Fetch full student details to ensure we have birth_date and latest data
+      const response = await api.get(`/students/${student.id}`);
+      const fullStudent = response.data;
+      
+      setFormData({
+        full_name: fullStudent.full_name,
+        phone: fullStudent.phone || '',
+        birth_date: fullStudent.birth_date || '',
+        status: fullStudent.status
+      });
+      setEditingId(fullStudent.id);
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error("Failed to fetch student details for editing", error);
+      // Fallback to table data if fetch fails
+      setFormData({
+        full_name: student.full_name,
+        phone: student.phone || '',
+        birth_date: (student as any).birth_date || '',
+        status: student.status
+      });
+      setEditingId(student.id);
+      setIsModalOpen(true);
+    }
   };
 
   const handleCreate = () => {
-    setFormData({ full_name: '', phone: '+998', birth_date: '', status: 'active', face_data_id: '' });
+    setFormData({ full_name: '', phone: '+998', birth_date: '', status: 'active' });
     setEditingId(null);
     setIsModalOpen(true);
   };
@@ -149,9 +167,9 @@ export const Students: React.FC = () => {
           <table className="w-full text-left text-sm text-gray-400">
             <thead className="bg-gray-900/50 text-gray-300 uppercase font-medium">
               <tr>
+                <th className="px-6 py-4 w-16">#</th>
                 <th className="px-6 py-4">F.I.O</th>
                 <th className="px-6 py-4">Telefon</th>
-                <th className="px-6 py-4">Face ID</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Amallar</th>
               </tr>
@@ -162,17 +180,20 @@ export const Students: React.FC = () => {
               ) : students.length === 0 ? (
                 <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">O'quvchilar topilmadi</td></tr>
               ) : (
-                students.map(student => (
+                students.map((student, index) => (
                   <tr key={student.id} className="hover:bg-gray-700/20 transition-colors">
-                    <td className="px-6 py-4 text-white font-medium">{student.full_name}</td>
-                    <td className="px-6 py-4 font-mono">{student.phone || 'Kiritilmagan'}</td>
+                    <td className="px-6 py-4 text-gray-500 font-bold">{index + 1}</td>
                     <td className="px-6 py-4">
-                      {student.face_data_id ? (
-                        <span className="text-emerald-400 font-mono bg-emerald-500/10 px-2 py-1 rounded text-xs">{student.face_data_id}</span>
-                      ) : (
-                        <span className="text-gray-500 text-xs">Yo'q</span>
-                      )}
+                      <div className="flex items-center gap-3">
+                         <img 
+                            src={`https://ui-avatars.com/api/?name=${student.full_name}&background=random`} 
+                            alt={student.full_name} 
+                            className="w-8 h-8 rounded-full border border-gray-600"
+                         />
+                         <span className="text-white font-medium">{student.full_name}</span>
+                      </div>
                     </td>
+                    <td className="px-6 py-4 font-mono">{student.phone || 'Kiritilmagan'}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
                         student.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 
@@ -193,7 +214,7 @@ export const Students: React.FC = () => {
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        {student.status !== 'expelled' ? (
+                        {['admin', 'manager'].includes(role) && student.status !== 'expelled' ? (
                           <button 
                             onClick={() => handleDelete(student.id, student.full_name)}
                             className="text-red-400 hover:text-red-300 p-1.5 rounded hover:bg-gray-700 transition-colors"
@@ -201,7 +222,8 @@ export const Students: React.FC = () => {
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
-                        ) : (
+                        ) : null}
+                        {student.status === 'expelled' && (
                           <button 
                             onClick={async () => {
                               if (window.confirm(`Rostdan ham '${student.full_name}'ni qayta tiklashni xohlaysizmi?`)) {
@@ -287,16 +309,6 @@ export const Students: React.FC = () => {
                   <option value="graduated">Bitirgan</option>
                   <option value="expelled">Ketgan / Haydalgan</option>
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1.5">Face Data ID (Yuz raqami)</label>
-                <input 
-                  type="text"
-                  value={formData.face_data_id} onChange={e => setFormData({...formData, face_data_id: e.target.value})}
-                  className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500 font-mono"
-                  placeholder="Apparatdagi raqami (masalan: 1024)"
-                />
               </div>
 
               <div className="pt-4 flex gap-3">

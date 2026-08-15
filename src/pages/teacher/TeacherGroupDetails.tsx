@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../services/api';
 import { ArrowLeft, CheckCircle, XCircle, Clock, Save, Plus, Edit2, BookOpen, Star, FileText, MessageSquare } from 'lucide-react';
 
 export const TeacherGroupDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const [group, setGroup] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
@@ -14,7 +15,12 @@ export const TeacherGroupDetails: React.FC = () => {
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [attendanceState, setAttendanceState] = useState<Record<string, string>>({});
   const [isAttendanceSaved, setIsAttendanceSaved] = useState(false);
-  const [activeTab, setActiveTab] = useState<'info' | 'attendance' | 'homework'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'attendance' | 'homework' | 'matrix' | 'hw_matrix'>(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tab = searchParams.get('tab');
+    if (tab === 'attendance' || tab === 'homework' || tab === 'matrix' || tab === 'hw_matrix') return tab;
+    return 'info';
+  });
   
   // Homework states
   const [currentHomework, setCurrentHomework] = useState<any>(null);
@@ -26,12 +32,15 @@ export const TeacherGroupDetails: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAttendanceLoaded, setIsAttendanceLoaded] = useState(false);
+  const [attendanceMatrix, setAttendanceMatrix] = useState<any[]>([]);
+  const [homeworkMatrix, setHomeworkMatrix] = useState<any[]>([]);
   const [formError, setFormError] = useState('');
 
   // Automation states
   const [todaySchedule, setTodaySchedule] = useState<any>(null);
   const [timeStatus, setTimeStatus] = useState<'NO_LESSON' | 'EARLY' | 'NOW' | 'PASSED'>('NO_LESSON');
   const [timeMessage, setTimeMessage] = useState('');
+  const [lessonLimit, setLessonLimit] = useState<number | 'all'>(10);
   
   // Lesson Modal State (O'qituvchilar endi modal orqali emas, avtomat ochadi, lekin zaxira uchun saqlaymiz)
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
@@ -46,13 +55,17 @@ export const TeacherGroupDetails: React.FC = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [groupRes, studentsRes, lessonsRes] = await Promise.all([
+        const [groupRes, studentsRes, lessonsRes, matrixRes, gradesRes] = await Promise.all([
           api.get(`/groups/${id}`),
           api.get(`/groups/${id}/students`),
-          api.get('/lessons/', { params: { group_id: id, limit: 50 } })
+          api.get('/lessons/', { params: { group_id: id, limit: lessonLimit === 'all' ? 1000 : lessonLimit } }),
+          api.get(`/attendance/group/${id}`),
+          api.get('/grades/', { params: { group_id: id, limit: 1000 } })
         ]);
         setGroup(groupRes.data);
         setStudents(studentsRes.data);
+        setAttendanceMatrix(matrixRes.data.data || []);
+        setHomeworkMatrix(gradesRes.data.data || []);
         
         const lessonsData = lessonsRes.data.data || [];
         setLessons(lessonsData);
@@ -253,6 +266,15 @@ export const TeacherGroupDetails: React.FC = () => {
         lesson_id: selectedLesson.id,
         records
       });
+      
+      // Davomat jadvalini avtomatik yangilash
+      try {
+        const matrixRes = await api.get(`/attendance/group/${id}`);
+        setAttendanceMatrix(matrixRes.data.data || []);
+      } catch (e) {
+        console.error("Matrixni yangilashda xatolik", e);
+      }
+
       if (!auto) {
         alert("Davomat muvaffaqiyatli saqlandi!");
       }
@@ -296,6 +318,48 @@ export const TeacherGroupDetails: React.FC = () => {
     }
   };
 
+  const handleUpdateHomework = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentHomework) return;
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        title: newHomeworkForm.title,
+        max_score: newHomeworkForm.max_score,
+        due_date: newHomeworkForm.due_date ? new Date(newHomeworkForm.due_date).toISOString() : null,
+      };
+      const res = await api.put(`/homework/${currentHomework.id}`, payload);
+      setCurrentHomework(res.data);
+      setIsHomeworkModalOpen(false);
+    } catch (e: any) {
+      alert("Xatolik yuz berdi");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openCreateHomeworkModal = () => {
+    setNewHomeworkForm({ title: '', max_score: 100, due_date: '' });
+    setIsHomeworkModalOpen(true);
+  };
+
+  const openEditHomeworkModal = () => {
+    if (!currentHomework) return;
+    let localDateStr = '';
+    if (currentHomework.due_date) {
+      const d = new Date(currentHomework.due_date);
+      // local datetime-local format: YYYY-MM-DDTHH:mm
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      localDateStr = d.toISOString().slice(0, 16);
+    }
+    setNewHomeworkForm({
+      title: currentHomework.title,
+      max_score: currentHomework.max_score,
+      due_date: localDateStr
+    });
+    setIsHomeworkModalOpen(true);
+  };
+
   const handleGradeChange = (studentId: string, field: 'score' | 'comment', value: any) => {
     setHomeworkGrades(prev => ({
       ...prev,
@@ -329,6 +393,15 @@ export const TeacherGroupDetails: React.FC = () => {
         }
       }
       alert("Baholar saqlandi!");
+      
+      // Update homework matrix
+      try {
+        const gradesRes = await api.get('/grades/', { params: { group_id: id, limit: 1000 } });
+        setHomeworkMatrix(gradesRes.data.data || []);
+      } catch (e) {
+        console.error("Matrixni yangilashda xatolik", e);
+      }
+      
       // Qayta yuklash
       handleLessonSelect(selectedLesson);
     } catch (e) {
@@ -338,19 +411,19 @@ export const TeacherGroupDetails: React.FC = () => {
     }
   };
 
-  // Avtomatik dars yaratish formasi ochiladi (Mavzu kiritish uchun)
+  // Bugungi dars uchun modal ochish
   const openTodayLessonModal = () => {
-    if (!todaySchedule || timeStatus === 'NO_LESSON' || timeStatus === 'EARLY') return;
+    if (!todaySchedule || timeStatus === 'NO_LESSON') return;
     
     const todayStr = new Date().toISOString().split('T')[0];
     const existingLesson = lessons.find(l => l.lesson_date === todayStr);
     
     if (existingLesson) {
       handleLessonSelect(existingLesson);
+      setActiveTab('attendance');
       return;
     }
     
-    // Yaratish uchun modalni ochamiz, vaqtlarni avtomatik to'ldirib
     setLessonForm({
       topic: '',
       lesson_date: todayStr,
@@ -362,6 +435,9 @@ export const TeacherGroupDetails: React.FC = () => {
 
   if (loading && !group) return <div className="text-gray-400 text-center py-10">Yuklanmoqda...</div>;
   if (!group) return <div className="text-red-400 text-center py-10">Guruh topilmadi</div>;
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const hasLessonToday = lessons.some(l => l.lesson_date === todayStr);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -390,21 +466,37 @@ export const TeacherGroupDetails: React.FC = () => {
           <button
             onClick={() => setActiveTab('attendance')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm flex items-center gap-2 ${
-              activeTab === 'attendance' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
+              activeTab === 'attendance' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25' : 'text-gray-400 hover:text-white'
             }`}
           >
-            Davomat
+            Yo'qlama qilish
+          </button>
+          <button
+            onClick={() => setActiveTab('matrix')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm flex items-center gap-2 ${
+              activeTab === 'matrix' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Davomat Jadvali
           </button>
           <button
             onClick={() => setActiveTab('homework')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm flex items-center gap-2 ${
-              activeTab === 'homework' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
+              activeTab === 'homework' ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/25' : 'text-gray-400 hover:text-white'
             }`}
           >
-            Vazifalar
+            Vazifa berish
+          </button>
+          <button
+            onClick={() => setActiveTab('hw_matrix')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm flex items-center gap-2 ${
+              activeTab === 'hw_matrix' ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/25' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Vazifalar Jadvali
           </button>
         </div>
-        <div className="flex flex-col items-end">
+        <div className="flex flex-col items-end gap-2">
           {timeStatus === 'NO_LESSON' && (
             <span className="px-4 py-2 bg-gray-800 text-gray-400 rounded-lg text-sm border border-gray-700">
               Bugun dars yo'q
@@ -416,18 +508,27 @@ export const TeacherGroupDetails: React.FC = () => {
             </span>
           )}
           {timeStatus === 'NOW' && (
+            <span className="px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-lg text-sm border border-emerald-500/20 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> {timeMessage}
+            </span>
+          )}
+          {timeStatus === 'PASSED' && (
+            <span className="px-4 py-2 bg-blue-500/10 text-blue-400 rounded-lg text-sm border border-blue-500/20 flex items-center gap-2">
+              <CheckCircle className="w-4 h-4" /> {timeMessage}
+            </span>
+          )}
+          
+          {timeStatus !== 'NO_LESSON' && !hasLessonToday && (
             <button 
               onClick={openTodayLessonModal}
               disabled={isSubmitting}
-              className="bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-500/30 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+              className="bg-purple-600/20 text-purple-400 hover:bg-purple-600 hover:text-white border border-purple-500/30 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm text-sm"
             >
-              <CheckCircle className="w-5 h-5" /> Bugungi yo'qlamani ochish
+              <Plus className="w-4 h-4" /> Bugungi yo'qlamani ochish
             </button>
           )}
-          {timeStatus === 'PASSED' && (
-            <span className="px-4 py-2 bg-blue-500/10 text-blue-400 rounded-lg text-sm border border-blue-500/20">
-              {timeMessage}
-            </span>
+          {hasLessonToday && timeStatus !== 'NO_LESSON' && (
+             <span className="text-xs text-gray-500 flex items-center gap-1"><CheckCircle className="w-3 h-3 text-emerald-500"/> Bugungi dars ochilgan</span>
           )}
         </div>
       </div>
@@ -464,9 +565,13 @@ export const TeacherGroupDetails: React.FC = () => {
                 {students.map((student, i) => (
                   <div key={student.student_id} className="p-4 hover:bg-gray-700/20 transition-colors flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center font-bold text-gray-400">
-                        {i + 1}
-                      </div>
+                      {student.student?.photo_url ? (
+                        <img src={student.student.photo_url} alt="Profile" className="w-10 h-10 rounded-full object-cover border border-gray-600" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center font-bold text-gray-400">
+                          {i + 1}
+                        </div>
+                      )}
                       <div>
                         <p className="text-white font-bold">{student.student?.full_name}</p>
                         <p className="text-sm text-gray-400">{student.student?.phone || "Telefon kiritilmagan"}</p>
@@ -553,28 +658,34 @@ export const TeacherGroupDetails: React.FC = () => {
               ) : students.length === 0 ? (
                 <div className="text-center text-gray-500 py-10">Bu guruhda o'quvchilar yo'q. Admin tomonidan qo'shilishi kutilmoqda.</div>
               ) : (
-                <div className="space-y-3">
+                <div className="p-4 space-y-3">
                   {students.map((student, i) => {
                     const status = attendanceState[student.student_id] || 'PRESENT'; // default
                     return (
-                      <div key={student.student_id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-900/50 rounded-xl border border-gray-700/50 hover:border-gray-600 transition-colors gap-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 font-bold text-sm">
-                            {i + 1}
-                          </div>
+                      <div key={student.student_id} className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-[#141419] hover:bg-[#1a1a24] rounded-2xl border border-gray-800 hover:border-gray-700 transition-all duration-300 gap-4 shadow-sm hover:shadow-xl">
+                        <div className="flex items-center gap-4">
+                          {student.student?.photo_url ? (
+                            <img src={student.student.photo_url} alt="Profile" className="w-10 h-10 rounded-xl object-cover border border-gray-700/50 shadow-inner" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-xl bg-gray-800/80 flex items-center justify-center text-gray-400 font-bold shadow-inner border border-gray-700/50">
+                              {i + 1}
+                            </div>
+                          )}
                           <div>
-                            <h4 className="text-white font-medium">{student.student?.full_name || student.student_id.slice(0, 8)}</h4>
-                            <p className="text-xs text-gray-400">O'quvchi</p>
+                            <h4 className="text-white font-bold text-lg">{student.student?.full_name || student.student_id.slice(0, 8)}</h4>
+                            <p className="text-sm text-gray-500 mt-0.5">O'quvchi</p>
                           </div>
                         </div>
                         
-                        <div className="flex gap-2">
+                        <div className="flex gap-2.5">
                           <button 
                             onClick={() => handleStatusChange(student.student_id, 'present')}
                             disabled={isAttendanceSaved}
-                            className={`px-4 py-2 flex items-center gap-2 rounded-lg text-sm font-medium transition-colors border ${
-                              status === 'present' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-gray-800 text-gray-400 border-gray-700'
-                            } ${isAttendanceSaved ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-700'}`}
+                            className={`px-5 py-2.5 flex items-center gap-2 rounded-xl text-sm font-bold transition-all duration-300 ${
+                              status === 'present' 
+                                ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] border-transparent' 
+                                : 'bg-gray-800/50 text-gray-400 border border-gray-700/50 hover:bg-emerald-500/10 hover:text-emerald-400 hover:border-emerald-500/30'
+                            } ${isAttendanceSaved ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             <CheckCircle className="w-4 h-4" /> Keldi
                           </button>
@@ -582,9 +693,11 @@ export const TeacherGroupDetails: React.FC = () => {
                           <button 
                             onClick={() => handleStatusChange(student.student_id, 'late')}
                             disabled={isAttendanceSaved}
-                            className={`px-4 py-2 flex items-center gap-2 rounded-lg text-sm font-medium transition-colors border ${
-                              status === 'late' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-gray-800 text-gray-400 border-gray-700'
-                            } ${isAttendanceSaved ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-700'}`}
+                            className={`px-5 py-2.5 flex items-center gap-2 rounded-xl text-sm font-bold transition-all duration-300 ${
+                              status === 'late' 
+                                ? 'bg-amber-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.3)] border-transparent' 
+                                : 'bg-gray-800/50 text-gray-400 border border-gray-700/50 hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-500/30'
+                            } ${isAttendanceSaved ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             <Clock className="w-4 h-4" /> Kechikdi
                           </button>
@@ -592,9 +705,11 @@ export const TeacherGroupDetails: React.FC = () => {
                           <button 
                             onClick={() => handleStatusChange(student.student_id, 'absent')}
                             disabled={isAttendanceSaved}
-                            className={`px-4 py-2 flex items-center gap-2 rounded-lg text-sm font-medium transition-colors border ${
-                              status === 'absent' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-gray-800 text-gray-400 border-gray-700'
-                            } ${isAttendanceSaved ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-700'}`}
+                            className={`px-5 py-2.5 flex items-center gap-2 rounded-xl text-sm font-bold transition-all duration-300 ${
+                              status === 'absent' 
+                                ? 'bg-rose-500 text-white shadow-[0_0_20px_rgba(244,63,94,0.3)] border-transparent' 
+                                : 'bg-gray-800/50 text-gray-400 border border-gray-700/50 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/30'
+                            } ${isAttendanceSaved ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             <XCircle className="w-4 h-4" /> Kelmadi
                           </button>
@@ -607,6 +722,219 @@ export const TeacherGroupDetails: React.FC = () => {
             </div>
           </div>
         </div>
+        </div>
+      ) : activeTab === 'matrix' ? (
+        <div className="bg-gray-900/60 backdrop-blur-2xl border border-gray-700/60 rounded-3xl overflow-hidden shadow-2xl shadow-black/50 min-h-[600px] flex flex-col">
+          <div className="p-6 border-b border-gray-700/50 bg-gradient-to-r from-gray-900 to-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
+            <h3 className="text-xl font-bold text-white flex items-center gap-3">
+              Davomat Jurnali (Matrix)
+            </h3>
+            <div className="flex bg-gray-900/80 p-1 rounded-xl border border-gray-700/50 shadow-inner">
+              <button 
+                onClick={() => setLessonLimit(10)} 
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${lessonLimit === 10 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              >
+                Oxirgi 10
+              </button>
+              <button 
+                onClick={() => setLessonLimit(20)} 
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${lessonLimit === 20 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              >
+                Oxirgi 20
+              </button>
+              <button 
+                onClick={() => setLessonLimit('all')} 
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${lessonLimit === 'all' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              >
+                Barchasi
+              </button>
+            </div>
+          </div>
+          <div className="overflow-x-auto hide-scrollbar flex-1">
+            <table className="w-full text-left text-sm text-gray-300 border-collapse">
+              <thead className="bg-[#12121A] text-gray-400 uppercase text-xs tracking-wider">
+                <tr>
+                  <th className="px-6 py-5 font-bold border-b border-gray-700/80 sticky left-0 bg-[#12121A] z-10 w-16 text-center shadow-[1px_0_0_#374151]">#</th>
+                  <th className="px-6 py-5 font-bold border-b border-gray-700/80 sticky left-[64px] bg-[#12121A] z-10 min-w-[220px] shadow-[1px_0_0_#374151]">O'quvchi</th>
+                  {(lessonLimit === 'all' ? [...lessons].reverse() : [...lessons].slice(0, lessonLimit).reverse()).map(lesson => (
+                    <th key={lesson.id} className="px-3 py-4 font-semibold border-b border-gray-700/50 text-center min-w-[100px]">
+                      <div className="flex flex-col items-center">
+                        <span className="text-xs text-gray-500 whitespace-nowrap">{lesson.lesson_date.substring(5)}</span>
+                      </div>
+                    </th>
+                  ))}
+                  <th className="px-5 py-4 font-semibold border-b border-gray-700/50 text-center">%</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700/50 bg-gray-800/20">
+                {students.map((student, i) => {
+                  let presentCount = 0;
+                  let totalCount = 0;
+
+                  return (
+                    <tr key={student.student_id} className="group/row hover:bg-gray-800/60 transition-colors">
+                      <td className="px-6 py-5 whitespace-nowrap text-xs text-gray-500 font-bold sticky left-0 bg-[#15151f] group-hover/row:bg-gray-800 z-10 text-center border-b border-gray-700/30 shadow-[1px_0_0_#374151]">{i + 1}</td>
+                      <td className="px-6 py-5 font-bold text-gray-200 sticky left-[64px] bg-[#15151f] group-hover/row:bg-gray-800 z-10 whitespace-nowrap border-b border-gray-700/30 shadow-[1px_0_0_#374151]">
+                        {student.student?.full_name || "Noma'lum"}
+                      </td>
+                      {(lessonLimit === 'all' ? [...lessons].reverse() : [...lessons].slice(0, lessonLimit).reverse()).map(lesson => {
+                        const att = attendanceMatrix.find(a => a.student_id === student.student_id && a.lesson_id === lesson.id);
+                        
+                        if (att) totalCount++;
+                        if (att?.status === 'present') presentCount++;
+
+                        return (
+                          <td key={lesson.id} className="px-3 py-5 text-center border-b border-gray-700/30">
+                            {att ? (
+                              att.status === 'present' ? (
+                                <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)]" title="Keldi">
+                                  <CheckCircle className="w-4 h-4" />
+                                </div>
+                              ) : att.status === 'absent' ? (
+                                <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.2)]" title="Kelmadi">
+                                  <XCircle className="w-4 h-4" />
+                                </div>
+                              ) : att.status === 'late' ? (
+                                <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.2)]" title="Kechikdi">
+                                  <Clock className="w-4 h-4" />
+                                </div>
+                              ) : (
+                                <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400" title="Sababli">
+                                  ℹ️
+                                </div>
+                              )
+                            ) : (
+                              <span className="text-gray-600 font-medium">-</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                      <td className="px-6 py-5 border-b border-gray-700/30">
+                        {totalCount > 0 ? (
+                          <div className="flex items-center gap-3 justify-end min-w-[120px]">
+                            <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  (presentCount / totalCount) >= 0.8 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
+                                  (presentCount / totalCount) >= 0.6 ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]'
+                                }`}
+                                style={{ width: `${Math.round((presentCount / totalCount) * 100)}%` }}
+                              ></div>
+                            </div>
+                            <span className={`w-10 text-right font-bold ${
+                              (presentCount / totalCount) >= 0.8 ? 'text-emerald-400' :
+                              (presentCount / totalCount) >= 0.6 ? 'text-amber-400' : 'text-rose-400'
+                            }`}>
+                              {Math.round((presentCount / totalCount) * 100)}%
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-3 justify-end min-w-[120px]">
+                            <div className="flex-1 h-2 bg-gray-800 rounded-full"></div>
+                            <span className="w-10 text-right text-gray-600 font-bold">0%</span>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : activeTab === 'hw_matrix' ? (
+        <div className="bg-gray-900/60 backdrop-blur-2xl border border-gray-700/60 rounded-3xl overflow-hidden shadow-2xl shadow-black/50 min-h-[600px] flex flex-col">
+          <div className="p-6 border-b border-gray-700/50 bg-gradient-to-r from-gray-900 to-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
+            <h3 className="text-xl font-bold text-white flex items-center gap-3">
+              Vazifalar Jadvali (Uy vazifalari)
+            </h3>
+            <div className="flex bg-gray-900/80 p-1 rounded-xl border border-gray-700/50 shadow-inner">
+              <button 
+                onClick={() => setLessonLimit(10)} 
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${lessonLimit === 10 ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              >
+                Oxirgi 10
+              </button>
+              <button 
+                onClick={() => setLessonLimit(20)} 
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${lessonLimit === 20 ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              >
+                Oxirgi 20
+              </button>
+              <button 
+                onClick={() => setLessonLimit('all')} 
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${lessonLimit === 'all' ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              >
+                Barchasi
+              </button>
+            </div>
+          </div>
+          <div className="overflow-x-auto hide-scrollbar flex-1">
+            <table className="w-full text-left text-sm text-gray-300 border-collapse">
+              <thead className="bg-[#12121A] text-gray-400 uppercase text-xs tracking-wider">
+                <tr>
+                  <th className="px-6 py-5 font-bold border-b border-gray-700/80 sticky left-0 bg-[#12121A] z-10 w-16 text-center shadow-[1px_0_0_#374151]">#</th>
+                  <th className="px-6 py-5 font-bold border-b border-gray-700/80 sticky left-[64px] bg-[#12121A] z-10 min-w-[220px] shadow-[1px_0_0_#374151]">O'quvchi</th>
+                  {(lessonLimit === 'all' ? [...lessons].reverse() : [...lessons].slice(0, lessonLimit).reverse()).map(lesson => (
+                    <th key={lesson.id} className="px-3 py-4 font-semibold border-b border-gray-700/50 text-center min-w-[100px]">
+                      <div className="flex flex-col items-center">
+                        <span className="text-xs text-purple-400 font-bold whitespace-nowrap">{lesson.lesson_date.substring(5)}</span>
+                        <span className="text-[10px] text-gray-500 truncate max-w-[80px]" title={lesson.topic}>{lesson.topic || 'Mavzusiz'}</span>
+                      </div>
+                    </th>
+                  ))}
+                  <th className="px-5 py-4 font-semibold border-b border-gray-700/50 text-center">O'rtacha ball</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700/50 bg-gray-800/20">
+                {students.map((student, i) => {
+                  let totalScore = 0;
+                  let gradeCount = 0;
+
+                  return (
+                    <tr key={student.student_id} className="group/row hover:bg-gray-800/60 transition-colors">
+                      <td className="px-6 py-5 whitespace-nowrap text-xs text-gray-500 font-bold sticky left-0 bg-[#15151f] group-hover/row:bg-gray-800 z-10 text-center border-b border-gray-700/30 shadow-[1px_0_0_#374151]">{i + 1}</td>
+                      <td className="px-6 py-5 font-bold text-gray-200 sticky left-[64px] bg-[#15151f] group-hover/row:bg-gray-800 z-10 whitespace-nowrap border-b border-gray-700/30 shadow-[1px_0_0_#374151]">
+                        {student.student?.full_name || "Noma'lum"}
+                      </td>
+                      {(lessonLimit === 'all' ? [...lessons].reverse() : [...lessons].slice(0, lessonLimit).reverse()).map(lesson => {
+                        const grade = homeworkMatrix.find(g => g.student_id === student.student_id && g.lesson_id === lesson.id && g.grade_type === 'homework');
+                        
+                        if (grade && grade.score !== undefined) {
+                          totalScore += grade.score;
+                          gradeCount++;
+                        }
+
+                        return (
+                          <td key={lesson.id} className="px-3 py-5 text-center border-b border-gray-700/30">
+                            {grade ? (
+                              <div className={`inline-flex items-center justify-center min-w-[2rem] px-2 h-8 rounded-xl font-bold text-xs ${
+                                (grade.score / (grade.max_score || 100)) >= 0.8 ? 'bg-emerald-500/20 text-emerald-400' :
+                                (grade.score / (grade.max_score || 100)) >= 0.5 ? 'bg-amber-500/20 text-amber-400' : 'bg-rose-500/20 text-rose-400'
+                              }`} title={grade.comment || 'Izoh yo\'q'}>
+                                {grade.score}
+                              </div>
+                            ) : (
+                              <span className="text-gray-700 font-medium text-xs">-</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                      <td className="px-6 py-5 border-b border-gray-700/30 text-center">
+                        {gradeCount > 0 ? (
+                          <span className="text-purple-400 font-bold text-sm bg-purple-500/10 px-3 py-1 rounded-full border border-purple-500/20">
+                            {Math.round(totalScore / gradeCount)}
+                          </span>
+                        ) : (
+                          <span className="text-gray-600 font-medium text-xs">0</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
         /* HOMEWORK TAB */
@@ -656,7 +984,7 @@ export const TeacherGroupDetails: React.FC = () => {
                   <h3 className="text-white text-xl font-bold mb-2">{selectedLesson.lesson_date} — {selectedLesson.topic || 'Mavzusiz'}</h3>
                   <p className="text-gray-400 mb-6">Bu dars uchun hali uy vazifasi berilmagan.</p>
                   <button
-                    onClick={() => setIsHomeworkModalOpen(true)}
+                    onClick={openCreateHomeworkModal}
                     className="bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-xl font-bold transition-colors flex items-center gap-2 mx-auto shadow-lg shadow-purple-500/25"
                   >
                     <Plus className="w-5 h-5" /> Uy vazifasi berish
@@ -674,12 +1002,27 @@ export const TeacherGroupDetails: React.FC = () => {
                       {currentHomework.description && (
                         <p className="text-gray-400 text-sm mt-1">{currentHomework.description}</p>
                       )}
+                      {currentHomework.due_date && (
+                        <div className="flex items-center gap-2 mt-3 text-sm bg-gray-900/50 inline-flex px-3 py-1.5 rounded-lg border border-gray-700/50">
+                          <Clock className="w-4 h-4 text-amber-400" />
+                          <span className="text-gray-300">Muddat:</span>
+                          <span className="text-amber-400 font-bold">
+                            {new Date(currentHomework.due_date).toLocaleString('uz-UZ', { dateStyle: 'short', timeStyle: 'short' })}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex flex-col items-end gap-2">
                       <div className="px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-xl">
                         <span className="text-purple-400 font-bold text-lg">{currentHomework.max_score}</span>
                         <span className="text-gray-500 text-sm"> ball</span>
                       </div>
+                      <button
+                        onClick={openEditHomeworkModal}
+                        className="text-xs text-gray-400 hover:text-white flex items-center gap-1.5 bg-gray-700/50 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors border border-gray-600/50"
+                      >
+                        <Edit2 className="w-3 h-3" /> O'zgartirish
+                      </button>
                     </div>
                   </div>
                   <div className="mt-4 flex items-center gap-6 text-sm text-gray-400">
@@ -715,9 +1058,13 @@ export const TeacherGroupDetails: React.FC = () => {
                           <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                             {/* Student Info */}
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className="w-9 h-9 rounded-full bg-gray-700 flex items-center justify-center text-gray-300 font-bold text-sm flex-shrink-0">
-                                {i + 1}
-                              </div>
+                              {student.student?.photo_url ? (
+                                <img src={student.student.photo_url} alt="Profile" className="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-gray-600" />
+                              ) : (
+                                <div className="w-9 h-9 rounded-full bg-gray-700 flex items-center justify-center text-gray-300 font-bold text-sm flex-shrink-0">
+                                  {i + 1}
+                                </div>
+                              )}
                               <div className="min-w-0">
                                 <h4 className="text-white font-semibold truncate">{student.student?.full_name || "Noma'lum"}</h4>
                                 {sub ? (
@@ -793,12 +1140,12 @@ export const TeacherGroupDetails: React.FC = () => {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-5 border-b border-gray-800 flex justify-between items-center bg-gray-800/30">
-              <h3 className="text-xl font-bold text-white">Uy vazifasi berish</h3>
+              <h3 className="text-xl font-bold text-white">Uy vazifasi {currentHomework?.id && newHomeworkForm.title === currentHomework.title ? 'tahrirlash' : 'berish'}</h3>
               <button onClick={() => setIsHomeworkModalOpen(false)} className="text-gray-400 hover:text-white transition-colors">
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
-            <form onSubmit={handleCreateHomework} className="p-5 space-y-4">
+            <form onSubmit={currentHomework?.id && newHomeworkForm.title === currentHomework.title ? handleUpdateHomework : handleCreateHomework} className="p-5 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1.5">Vazifa sarlavhasi *</label>
                 <input

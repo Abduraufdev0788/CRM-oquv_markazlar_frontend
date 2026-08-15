@@ -5,14 +5,16 @@ import { useAuthStore } from './store/authStore';
 
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { LeadsPage } from './pages/admin/LeadsPage';
 import { Users } from './pages/admin/Users';
 import { Students } from './pages/admin/Students';
 import { Groups } from './pages/admin/Groups';
 import { GroupDetails } from './pages/admin/GroupDetails';
+import { Rooms } from './pages/admin/Rooms';
 import { Finance } from './pages/admin/Finance';
 import { Settings } from './pages/admin/Settings';
-import { FaceID } from './pages/admin/FaceID';
 import { Notifications } from './pages/admin/Notifications';
+import { AttendancePage } from './pages/admin/AttendancePage';
 
 import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
 import { TeacherGroups } from './pages/teacher/TeacherGroups';
@@ -28,6 +30,7 @@ import { StudentMaterials } from './pages/student/StudentMaterials';
 import { StudentSchedule } from './pages/student/StudentSchedule';
 import { StudentTests } from './pages/student/StudentTests';
 import { StudentTestTake } from './pages/student/StudentTestTake';
+import { StudentFinance } from './pages/student/StudentFinance';
 import { Profile } from './pages/common/Profile';
 
 const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, allowedRole: string }) => {
@@ -55,6 +58,11 @@ function App() {
                   <AdminDashboard />
                 </ProtectedRoute>
               } />
+              <Route path="leads" element={
+                <ProtectedRoute allowedRole="admin">
+                  <LeadsPage />
+                </ProtectedRoute>
+              } />
               <Route path="users" element={
                 <ProtectedRoute allowedRole="admin">
                   <Users />
@@ -75,6 +83,16 @@ function App() {
                   <GroupDetails />
                 </ProtectedRoute>
               } />
+              <Route path="rooms" element={
+                <ProtectedRoute allowedRole="admin">
+                  <Rooms />
+                </ProtectedRoute>
+              } />
+              <Route path="attendance" element={
+                <ProtectedRoute allowedRole="admin">
+                  <AttendancePage />
+                </ProtectedRoute>
+              } />
               <Route path="finance" element={
                 <ProtectedRoute allowedRole="admin">
                   <Finance />
@@ -83,11 +101,6 @@ function App() {
               <Route path="settings" element={
                 <ProtectedRoute allowedRole="admin">
                   <Settings />
-                </ProtectedRoute>
-              } />
-              <Route path="face-id" element={
-                <ProtectedRoute allowedRole="admin">
-                  <FaceID />
                 </ProtectedRoute>
               } />
               <Route path="notifications" element={
@@ -101,6 +114,24 @@ function App() {
                 </ProtectedRoute>
               } />
             </Route>
+
+            <Route path="/manager/*" element={
+              <ProtectedRoute allowedRole="manager">
+                <Routes>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="leads" element={<LeadsPage />} />
+                  <Route path="users" element={<Users />} />
+                  <Route path="students" element={<Students />} />
+                  <Route path="groups" element={<Groups />} />
+                  <Route path="groups/:id" element={<GroupDetails />} />
+                  <Route path="rooms" element={<Rooms />} />
+                  <Route path="attendance" element={<AttendancePage />} />
+                  <Route path="finance" element={<Finance />} />
+                  <Route path="notifications" element={<Notifications />} />
+                  <Route path="profile" element={<Profile />} />
+                </Routes>
+              </ProtectedRoute>
+            } />
             
             <Route path="/teacher/*" element={
               <ProtectedRoute allowedRole="teacher">
@@ -127,6 +158,7 @@ function App() {
                   <Route path="materials" element={<StudentMaterials />} />
                   <Route path="tests" element={<StudentTests />} />
                   <Route path="tests/:id" element={<StudentTestTake />} />
+                  <Route path="finance" element={<StudentFinance />} />
                   <Route path="profile" element={<Profile />} />
                 </Routes>
               </ProtectedRoute>

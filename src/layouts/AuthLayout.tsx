@@ -7,6 +7,7 @@ export const AuthLayout: React.FC = () => {
 
   if (token) {
     if (role === 'admin') return <Navigate to="/admin" replace />;
+    if (role === 'manager') return <Navigate to="/manager" replace />;
     if (role === 'teacher') return <Navigate to="/teacher" replace />;
     if (role === 'student') return <Navigate to="/student" replace />;
   }

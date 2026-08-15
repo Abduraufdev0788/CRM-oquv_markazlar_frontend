@@ -24,8 +24,9 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
   }, [user, role, setUser]);
 
   useEffect(() => {
-    if (user && (role === 'admin' || role === 'manager' || role === 'teacher')) {
-      api.get('/notifications/')
+    if (user) {
+      const getNotifUrl = () => role === 'student' ? '/student-portal/notifications' : '/notifications/';
+      api.get(getNotifUrl())
         .then(res => setNotifications(res.data))
         .catch(err => console.error("Error fetching notifications", err));
     }
@@ -45,10 +46,12 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
     logout();
   };
 
+  const getNotifBaseUrl = () => role === 'student' ? '/student-portal/notifications' : '/notifications';
+
   const markAsRead = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await api.put(`/notifications/${id}/read`);
+      await api.put(`${getNotifBaseUrl()}/${id}/read`);
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
     } catch (err) {
       console.error(err);
@@ -57,7 +60,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
 
   const markAllAsRead = async () => {
     try {
-      await api.put(`/notifications/read-all`);
+      await api.put(`${getNotifBaseUrl()}/read-all`);
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
     } catch (err) {
       console.error(err);
@@ -76,9 +79,58 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
           <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
           <input 
             type="text" 
-            placeholder="Qidirish..." 
+            placeholder="Qidirish (Talaba / Xodim)..." 
+            onChange={async (e) => {
+              const val = e.target.value.trim();
+              if (val.length >= 2) {
+                try {
+                  const [stuRes, userRes] = await Promise.all([
+                    api.get('/students/', { params: { search: val, limit: 3 } }),
+                    api.get('/users/', { params: { search: val, limit: 3, is_active: true } })
+                  ]);
+                  // Store results in window object temporarily to avoid adding too much state logic to Topbar
+                  (window as any)._searchResults = {
+                    students: stuRes.data.data || [],
+                    users: userRes.data.data || [],
+                    show: true
+                  };
+                  document.dispatchEvent(new Event('search-results-updated'));
+                } catch (err) {}
+              } else {
+                (window as any)._searchResults = { show: false, students: [], users: [] };
+                document.dispatchEvent(new Event('search-results-updated'));
+              }
+            }}
+            onBlur={() => {
+              setTimeout(() => {
+                (window as any)._searchResults = { show: false, students: [], users: [] };
+                document.dispatchEvent(new Event('search-results-updated'));
+              }, 200);
+            }}
+            onKeyDown={async (e) => {
+              if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                const val = e.currentTarget.value.trim();
+                try {
+                  const [stuRes, userRes] = await Promise.all([
+                    api.get('/students/', { params: { search: val, limit: 1 } }),
+                    api.get('/users/', { params: { search: val, limit: 1, is_active: true } })
+                  ]);
+                  const stuCount = stuRes.data.data?.length || 0;
+                  const userCount = userRes.data.data?.length || 0;
+                  
+                  if (userCount > 0 && stuCount === 0) {
+                    window.location.href = `/${role}/users?q=${encodeURIComponent(val)}`;
+                  } else {
+                    window.location.href = `/${role}/students?q=${encodeURIComponent(val)}`;
+                  }
+                } catch (err) {
+                  window.location.href = `/${role}/students?q=${encodeURIComponent(val)}`;
+                }
+              }
+            }}
             className="bg-gray-800 border border-gray-700 text-sm text-gray-300 rounded-full pl-9 pr-4 py-1.5 focus:outline-none focus:border-blue-500 w-64 transition-all focus:w-72"
           />
+          <SearchResultsDropdown role={role} />
         </div>
       </div>
 
@@ -167,5 +219,59 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
         </button>
       </div>
     </header>
+  );
+};
+
+const SearchResultsDropdown = ({ role }: { role: string | null }) => {
+  const [results, setResults] = useState<{ show: boolean, students: any[], users: any[] }>({ show: false, students: [], users: [] });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setResults((window as any)._searchResults || { show: false, students: [], users: [] });
+    };
+    document.addEventListener('search-results-updated', handleUpdate);
+    return () => document.removeEventListener('search-results-updated', handleUpdate);
+  }, []);
+
+  if (!results.show || (results.students.length === 0 && results.users.length === 0)) return null;
+
+  return (
+    <div className="absolute top-full left-0 mt-2 w-80 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl overflow-hidden z-50">
+      <div className="max-h-[400px] overflow-y-auto py-2">
+        {results.users.length > 0 && (
+          <div className="mb-2">
+            <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Xodimlar</div>
+            {results.users.map((u: any) => (
+              <a 
+                key={u.id} 
+                href={`/${role}/users?q=${encodeURIComponent(u.full_name)}`}
+                className="block px-4 py-2 hover:bg-gray-700/50 transition-colors"
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <div className="text-sm text-white font-medium">{u.full_name}</div>
+                <div className="text-xs text-gray-400">{u.phone} • {u.role}</div>
+              </a>
+            ))}
+          </div>
+        )}
+        
+        {results.students.length > 0 && (
+          <div>
+            <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Talabalar</div>
+            {results.students.map((s: any) => (
+              <a 
+                key={s.id} 
+                href={`/${role}/students?q=${encodeURIComponent(s.full_name)}`}
+                className="block px-4 py-2 hover:bg-gray-700/50 transition-colors"
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <div className="text-sm text-white font-medium">{s.full_name}</div>
+                <div className="text-xs text-gray-400">{s.phone}</div>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 };

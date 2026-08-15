@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { Wallet, TrendingDown, Plus, Search, CheckCircle, XCircle, FileText, Banknote, Clock, AlertCircle } from 'lucide-react';
 import { SearchableSelect } from '../../components/SearchableSelect';
+import { useAuthStore } from '../../store/authStore';
 
 export const Finance: React.FC = () => {
+  const { role } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'payments' | 'expenses' | 'salaries' | 'debtors'>('payments');
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -257,13 +259,15 @@ export const Finance: React.FC = () => {
             <FileText className="w-5 h-5" />
             Excelga tushirish
           </button>
-          <button 
-            onClick={() => { setIsSalaryModalOpen(true); fetchTeachers(); }}
-            className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40"
-          >
-            <Banknote className="w-5 h-5" />
-            Maosh hisoblash
-          </button>
+          {role === 'admin' && (
+            <button 
+              onClick={() => { setIsSalaryModalOpen(true); fetchTeachers(); }}
+              className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40"
+            >
+              <Banknote className="w-5 h-5" />
+              Maosh hisoblash
+            </button>
+          )}
           <button 
             onClick={() => setIsExpenseModalOpen(true)}
             className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg shadow-red-500/20 hover:shadow-red-500/40"
@@ -300,14 +304,16 @@ export const Finance: React.FC = () => {
             >
               Xarajatlar
             </button>
-            <button
-              onClick={() => setActiveTab('salaries')}
-              className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-300 whitespace-nowrap ${
-                activeTab === 'salaries' ? 'bg-blue-600 text-white shadow-md scale-105' : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
-              }`}
-            >
-              Maoshlar
-            </button>
+            {['admin', 'manager'].includes(role) && (
+              <button
+                onClick={() => setActiveTab('salaries')}
+                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-300 whitespace-nowrap ${
+                  activeTab === 'salaries' ? 'bg-blue-600 text-white shadow-md scale-105' : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                }`}
+              >
+                Maoshlar
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('debtors')}
               className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-300 whitespace-nowrap ${
@@ -343,6 +349,7 @@ export const Finance: React.FC = () => {
             <table className="w-full text-left text-sm text-gray-400">
               <thead className="bg-gray-900/50 text-gray-300 uppercase font-medium">
                 <tr>
+                  <th className="px-6 py-4 w-16">#</th>
                   <th className="px-6 py-4">Sana</th>
                   <th className="px-6 py-4">O'quvchi</th>
                   <th className="px-6 py-4">Summa</th>
@@ -352,18 +359,30 @@ export const Finance: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-700/50">
                 {loading ? (
-                  <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">Yuklanmoqda...</td></tr>
+                  <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500">Yuklanmoqda...</td></tr>
                 ) : data.length === 0 ? (
-                  <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">To'lovlar topilmadi</td></tr>
+                  <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500">To'lovlar topilmadi</td></tr>
                 ) : (
-                  data.map((item: any) => (
+                  data.map((item: any, index: number) => (
                     <tr key={item.id} className="hover:bg-gray-700/30 transition-colors">
+                      <td className="px-6 py-4 text-gray-500">{index + 1}</td>
                       <td className="px-6 py-4">{new Date(item.created_at).toLocaleDateString()}</td>
                       <td className="px-6 py-4">
-                        <div className="text-white font-medium">{item.student?.full_name || item.student_id?.slice(0, 8) || 'Noma\'lum'}</div>
-                        {item.group_name && (
-                          <div className="text-xs text-gray-400 mt-0.5">{item.group_name}</div>
-                        )}
+                        <div className="flex items-center gap-3">
+                          {item.student?.photo_url ? (
+                            <img src={item.student.photo_url} alt="Profile" className="w-8 h-8 rounded-full object-cover border border-gray-700" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs uppercase border border-blue-500/20">
+                              {item.student?.full_name?.charAt(0) || '?'}
+                            </div>
+                          )}
+                          <div>
+                            <div className="text-white font-medium">{item.student?.full_name || item.student_id?.slice(0, 8) || 'Noma\'lum'}</div>
+                            {item.group_name && (
+                              <div className="text-xs text-gray-400 mt-0.5">{item.group_name}</div>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-emerald-400 font-bold">{formatCurrency(item.amount)}</td>
                       <td className="px-6 py-4 uppercase text-xs">{item.method}</td>
@@ -455,13 +474,17 @@ export const Finance: React.FC = () => {
                           <span className="text-emerald-400 flex items-center gap-1.5 text-xs font-medium bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20 w-max">
                             <CheckCircle className="w-4 h-4" /> To'langan
                           </span>
-                        ) : (
+                        ) : role === 'admin' ? (
                           <button 
                             onClick={() => paySalary(item.id)}
                             className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 hover:shadow-lg hover:shadow-emerald-500/20"
                           >
                             <Clock className="w-4 h-4" /> To'lash
                           </button>
+                        ) : (
+                          <span className="text-gray-400 flex items-center gap-1.5 text-xs font-medium bg-gray-500/10 px-3 py-1.5 rounded-lg border border-gray-500/20 w-max">
+                            Kutilmoqda
+                          </span>
                         )}
                       </td>
                     </tr>

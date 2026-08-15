@@ -2,9 +2,9 @@ import { create } from 'zustand';
 
 interface AuthState {
   token: string | null;
-  role: 'admin' | 'teacher' | 'student' | null;
+  role: 'admin' | 'manager' | 'teacher' | 'student' | null;
   user: any | null;
-  setAuth: (token: string, role: 'admin' | 'teacher' | 'student') => void;
+  setAuth: (token: string, role: 'admin' | 'manager' | 'teacher' | 'student') => void;
   setUser: (user: any) => void;
   logout: () => void;
 }

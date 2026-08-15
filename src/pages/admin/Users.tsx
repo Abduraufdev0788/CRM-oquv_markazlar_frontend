@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { Search, Plus, UserPlus, X, Edit2, Trash2 } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
 
 interface User {
   id: string;
@@ -11,9 +12,13 @@ interface User {
 }
 
 export const Users: React.FC = () => {
+  const { role } = useAuthStore();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const location = window.location;
+  const urlParams = new URLSearchParams(location.search);
+  const initialSearch = urlParams.get('q') || '';
+  const [search, setSearch] = useState(initialSearch);
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -83,19 +88,21 @@ export const Users: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-white tracking-tight">Xodimlar</h2>
-          <p className="text-gray-400 mt-1">O'quv markaz barcha xodimlari ro'yxati va boshqaruvi.</p>
+          <p className="text-gray-400 mt-1">O'quv markaz barcha xodimlari ro'yxati{['admin', 'manager'].includes(role) ? ' va boshqaruvi' : ''}.</p>
         </div>
-        <button 
-          onClick={() => {
-            setFormData({ full_name: '', phone: '+998', email: '', password: '', role: 'teacher' });
-            setEditingUserId(null);
-            setIsModalOpen(true);
-          }}
-          className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-        >
-          <UserPlus className="w-5 h-5" />
-          Yangi xodim
-        </button>
+        {['admin', 'manager'].includes(role) && (
+          <button 
+            onClick={() => {
+              setFormData({ full_name: '', phone: '+998', email: '', password: '', role: 'teacher' });
+              setEditingUserId(null);
+              setIsModalOpen(true);
+            }}
+            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+          >
+            <UserPlus className="w-5 h-5" />
+            Yangi xodim
+          </button>
+        )}
       </div>
 
       <div className="bg-gray-800/50 backdrop-blur-md border border-gray-700 rounded-2xl overflow-hidden">
@@ -116,11 +123,12 @@ export const Users: React.FC = () => {
           <table className="w-full text-left text-sm text-gray-400">
             <thead className="bg-gray-900/50 text-gray-300 uppercase font-medium">
               <tr>
+                <th className="px-6 py-4 w-16">#</th>
                 <th className="px-6 py-4">F.I.O</th>
                 <th className="px-6 py-4">Telefon</th>
                 <th className="px-6 py-4">Rol</th>
                 <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Amallar</th>
+                {['admin', 'manager'].includes(role) && <th className="px-6 py-4 text-right">Amallar</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/50">
@@ -129,9 +137,19 @@ export const Users: React.FC = () => {
               ) : users.length === 0 ? (
                 <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">Ma'lumot topilmadi</td></tr>
               ) : (
-                users.map(user => (
+                users.map((user, index) => (
                   <tr key={user.id} className="hover:bg-gray-700/20 transition-colors">
-                    <td className="px-6 py-4 text-white font-medium">{user.full_name}</td>
+                    <td className="px-6 py-4 text-gray-500 font-bold">{index + 1}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                         <img 
+                            src={`https://ui-avatars.com/api/?name=${user.full_name}&background=random`} 
+                            alt={user.full_name} 
+                            className="w-8 h-8 rounded-full border border-gray-600"
+                         />
+                         <span className="text-white font-medium">{user.full_name}</span>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 font-mono">{user.phone}</td>
                     <td className="px-6 py-4 capitalize">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
@@ -153,45 +171,47 @@ export const Users: React.FC = () => {
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button 
-                          onClick={() => {
-                            setFormData({
-                              full_name: user.full_name,
-                              phone: user.phone,
-                              email: '',
-                              password: '',
-                              role: user.role
-                            });
-                            setEditingUserId(user.id);
-                            setIsModalOpen(true);
-                          }}
-                          className="text-blue-400 hover:text-blue-300 p-1.5 rounded hover:bg-gray-700 transition-colors"
-                          title="Tahrirlash"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        {user.is_active && (
+                    {['admin', 'manager'].includes(role) && (
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
                           <button 
-                            onClick={async () => {
-                              if (window.confirm("Rostdan ham ushbu xodimni deaktivatsiya qilmoqchimisiz?")) {
-                                try {
-                                  await api.delete(`/users/${user.id}`);
-                                  fetchUsers();
-                                } catch (err) {
-                                  alert("Xatolik yuz berdi");
-                                }
-                              }
+                            onClick={() => {
+                              setFormData({
+                                full_name: user.full_name,
+                                phone: user.phone,
+                                email: '',
+                                password: '',
+                                role: user.role
+                              });
+                              setEditingUserId(user.id);
+                              setIsModalOpen(true);
                             }}
-                            className="text-red-400 hover:text-red-300 p-1.5 rounded hover:bg-gray-700 transition-colors"
-                            title="Deaktiv qilish"
+                            className="text-blue-400 hover:text-blue-300 p-1.5 rounded hover:bg-gray-700 transition-colors"
+                            title="Tahrirlash"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Edit2 className="w-4 h-4" />
                           </button>
-                        )}
-                      </div>
-                    </td>
+                          {user.is_active && (
+                            <button 
+                              onClick={async () => {
+                                if (window.confirm("Rostdan ham ushbu xodimni deaktivatsiya qilmoqchimisiz?")) {
+                                  try {
+                                    await api.delete(`/users/${user.id}`);
+                                    fetchUsers();
+                                  } catch (err) {
+                                    alert("Xatolik yuz berdi");
+                                  }
+                                }
+                              }}
+                              className="text-red-400 hover:text-red-300 p-1.5 rounded hover:bg-gray-700 transition-colors"
+                              title="Deaktiv qilish"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}
