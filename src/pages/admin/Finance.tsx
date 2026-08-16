@@ -13,6 +13,8 @@ export const Finance: React.FC = () => {
   // Tab filters
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('');
 
   // Modals
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -23,6 +25,7 @@ export const Finance: React.FC = () => {
   const [students, setStudents] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [studentEnrollments, setStudentEnrollments] = useState<any[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
 
   // Payment Form
   const [paymentForm, setPaymentForm] = useState({
@@ -72,10 +75,15 @@ export const Finance: React.FC = () => {
       }
 
       const response = await api.get(endpoint, {
-        params: isDebtors ? { month: month, year: year } : { 
+        params: isDebtors ? { 
+          month: month, 
+          year: year,
+          ...(selectedGroupId ? { group_id: selectedGroupId } : {})
+        } : { 
           limit: 50, 
           period_month: month, 
-          period_year: year 
+          period_year: year,
+          ...(activeTab === 'salaries' && selectedTeacherId ? { user_id: selectedTeacherId } : {})
         }
       });
       
@@ -109,6 +117,15 @@ export const Finance: React.FC = () => {
     }
   };
 
+  const fetchGroups = async () => {
+    try {
+      const res = await api.get('/groups/', { params: { limit: 100 } });
+      setGroups(res.data.data || []);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
     const fetchEnrollments = async () => {
       if (!paymentForm.student_id) {
@@ -130,7 +147,16 @@ export const Finance: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab, month, year]);
+  }, [activeTab, month, year, selectedGroupId, selectedTeacherId]);
+
+  useEffect(() => {
+    if (activeTab === 'debtors' && groups.length === 0) {
+      fetchGroups();
+    }
+    if (activeTab === 'salaries' && teachers.length === 0) {
+      fetchTeachers();
+    }
+  }, [activeTab]);
 
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -325,6 +351,30 @@ export const Finance: React.FC = () => {
           </div>
           
           <div className="flex gap-3">
+            {activeTab === 'debtors' && (
+              <select
+                value={selectedGroupId}
+                onChange={(e) => setSelectedGroupId(e.target.value)}
+                className="bg-gray-900 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 shadow-inner max-w-[150px] sm:max-w-none"
+              >
+                <option value="">Barcha guruhlar</option>
+                {groups.map(g => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            )}
+            {activeTab === 'salaries' && (
+              <select
+                value={selectedTeacherId}
+                onChange={(e) => setSelectedTeacherId(e.target.value)}
+                className="bg-gray-900 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 shadow-inner max-w-[150px] sm:max-w-none"
+              >
+                <option value="">Barcha o'qituvchilar</option>
+                {teachers.map(t => (
+                  <option key={t.id} value={t.id}>{t.full_name}</option>
+                ))}
+              </select>
+            )}
             <select 
               value={month} onChange={(e) => setMonth(parseInt(e.target.value))}
               className="bg-gray-900 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 shadow-inner"
@@ -498,6 +548,7 @@ export const Finance: React.FC = () => {
             <table className="w-full text-left text-sm text-gray-400">
               <thead className="bg-gray-900/50 text-gray-300 uppercase font-medium">
                 <tr>
+                  <th className="px-6 py-4 w-16">#</th>
                   <th className="px-6 py-4">F.I.O</th>
                   <th className="px-6 py-4">Guruhlari</th>
                   <th className="px-6 py-4">Telefon</th>
@@ -507,12 +558,13 @@ export const Finance: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-700/50">
                 {loading ? (
-                  <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">Yuklanmoqda...</td></tr>
+                  <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500">Yuklanmoqda...</td></tr>
                 ) : data.length === 0 ? (
-                  <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">Bu oy uchun qarzdorlar topilmadi! Barcha o'quvchilar to'lov qilgan.</td></tr>
+                  <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500">Bu oy uchun qarzdorlar topilmadi! Barcha o'quvchilar to'lov qilgan.</td></tr>
                 ) : (
-                  data.map((item: any) => (
+                  data.map((item: any, index: number) => (
                     <tr key={item.id} className="hover:bg-gray-700/30 transition-colors">
+                      <td className="px-6 py-4 text-gray-500">{index + 1}</td>
                       <td className="px-6 py-4 text-white font-medium">{item.full_name}</td>
                       <td className="px-6 py-4">
                         {item.groups && item.groups.length > 0 ? (
