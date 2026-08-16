@@ -97,7 +97,7 @@ export const Users: React.FC = () => {
               setEditingUserId(null);
               setIsModalOpen(true);
             }}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 w-full sm:w-auto shadow-lg shadow-blue-500/20"
           >
             <UserPlus className="w-5 h-5" />
             Yangi xodim

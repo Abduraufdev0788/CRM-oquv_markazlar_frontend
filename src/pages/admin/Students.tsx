@@ -26,7 +26,9 @@ export const Students: React.FC = () => {
     full_name: '',
     phone: '+998',
     birth_date: '',
-    status: 'active'
+    status: 'active',
+    parent_name: '',
+    parent_phone: '+998'
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formError, setFormError] = useState('');
@@ -62,6 +64,7 @@ export const Students: React.FC = () => {
       const payload = { 
         ...formData, 
         phone: formData.phone && formData.phone !== '+998' ? formData.phone : null,
+        parent_phone: formData.parent_phone && formData.parent_phone !== '+998' ? formData.parent_phone : null,
         birth_date: formData.birth_date || null
       };
       if (editingId) {
@@ -71,7 +74,7 @@ export const Students: React.FC = () => {
       }
       setIsModalOpen(false);
       fetchStudents();
-      setFormData({ full_name: '', phone: '+998', birth_date: '', status: 'active' });
+      setFormData({ full_name: '', phone: '+998', birth_date: '', status: 'active', parent_name: '', parent_phone: '+998' });
       setEditingId(null);
     } catch (err: any) {
       const detail = err.response?.data?.detail;
@@ -99,7 +102,9 @@ export const Students: React.FC = () => {
         full_name: fullStudent.full_name,
         phone: fullStudent.phone || '',
         birth_date: fullStudent.birth_date || '',
-        status: fullStudent.status
+        status: fullStudent.status,
+        parent_name: fullStudent.parent?.full_name || '',
+        parent_phone: fullStudent.parent?.phone || '+998'
       });
       setEditingId(fullStudent.id);
       setIsModalOpen(true);
@@ -110,7 +115,9 @@ export const Students: React.FC = () => {
         full_name: student.full_name,
         phone: student.phone || '',
         birth_date: (student as any).birth_date || '',
-        status: student.status
+        status: student.status,
+        parent_name: '',
+        parent_phone: '+998'
       });
       setEditingId(student.id);
       setIsModalOpen(true);
@@ -118,7 +125,7 @@ export const Students: React.FC = () => {
   };
 
   const handleCreate = () => {
-    setFormData({ full_name: '', phone: '+998', birth_date: '', status: 'active' });
+    setFormData({ full_name: '', phone: '+998', birth_date: '', status: 'active', parent_name: '', parent_phone: '+998' });
     setEditingId(null);
     setIsModalOpen(true);
   };
@@ -142,7 +149,7 @@ export const Students: React.FC = () => {
         </div>
         <button 
           onClick={handleCreate}
-          className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+          className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 w-full sm:w-auto shadow-lg shadow-blue-500/20"
         >
           <UserPlus className="w-5 h-5" />
           Yangi o'quvchi
@@ -280,13 +287,34 @@ export const Students: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1.5">Telefon raqam</label>
+                <label className="block text-sm font-medium text-gray-400 mb-1.5">O'quvchi telefon raqami</label>
                 <input 
                   type="text"
                   value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})}
                   className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500 font-mono"
                   placeholder="+998901234567"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1.5">Ota-ona ismi</label>
+                  <input 
+                    type="text"
+                    value={formData.parent_name} onChange={e => setFormData({...formData, parent_name: e.target.value})}
+                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500"
+                    placeholder="Masalan: Nodira Karimova"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1.5">Ota-ona raqami (Bot uchun)</label>
+                  <input 
+                    type="text"
+                    value={formData.parent_phone} onChange={e => setFormData({...formData, parent_phone: e.target.value})}
+                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500 font-mono"
+                    placeholder="+998901234567"
+                  />
+                </div>
               </div>
 
               <div>

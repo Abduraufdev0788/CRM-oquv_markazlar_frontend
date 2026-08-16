@@ -55,7 +55,7 @@ export const StudentSchedule: React.FC = () => {
   const currentMinute = currentTime.getMinutes();
 
   return (
-    <div className="min-h-screen bg-[#0f172a] p-6 md:p-8 animate-in fade-in duration-1000 relative overflow-hidden pb-24">
+    <div className="min-h-screen bg-[#0f172a] p-4 sm:p-6 md:p-8 animate-in fade-in duration-1000 relative overflow-hidden pb-24">
       {/* Abstract Background Elements */}
       <div className="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="fixed bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none"></div>
@@ -75,7 +75,7 @@ export const StudentSchedule: React.FC = () => {
               <p className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 font-bold tracking-widest uppercase text-xs mb-1">
                 EduCRM Pro
               </p>
-              <h1 className="text-4xl font-black text-white tracking-tight">Haftalik Jadval</h1>
+              <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">Haftalik Jadval</h1>
             </div>
           </div>
           
@@ -118,7 +118,7 @@ export const StudentSchedule: React.FC = () => {
                 {/* Gradient Border Wrap */}
                 <div className={`absolute inset-0 ${isToday ? 'bg-gradient-to-b from-indigo-500 to-purple-600' : 'bg-gradient-to-b from-white/10 to-transparent'} opacity-50`}></div>
                 
-                <div className="relative h-full bg-[#151c2c] backdrop-blur-xl rounded-[2rem] p-6 flex flex-col">
+                <div className="relative h-full bg-[#151c2c] backdrop-blur-xl rounded-[2rem] p-5 sm:p-6 flex flex-col">
                   {isToday && (
                     <div className="absolute top-6 right-6 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full flex items-center gap-1 shadow-lg shadow-indigo-500/25 z-20">
                       <Sparkles className="w-3 h-3" /> Bugun

@@ -15,6 +15,7 @@ export const Finance: React.FC = () => {
   const [year, setYear] = useState(new Date().getFullYear());
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Modals
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -80,9 +81,10 @@ export const Finance: React.FC = () => {
           year: year,
           ...(selectedGroupId ? { group_id: selectedGroupId } : {})
         } : { 
-          limit: 50, 
+          limit: 5000, 
           period_month: month, 
           period_year: year,
+          ...(activeTab === 'payments' && searchQuery ? { search: searchQuery } : {}),
           ...(activeTab === 'salaries' && selectedTeacherId ? { user_id: selectedTeacherId } : {})
         }
       });
@@ -101,7 +103,7 @@ export const Finance: React.FC = () => {
 
   const fetchStudents = async () => {
     try {
-      const res = await api.get('/students/', { params: { limit: 100 } });
+      const res = await api.get('/students/', { params: { limit: 5000 } });
       setStudents(res.data.data || []);
     } catch (error) {
       console.error(error);
@@ -110,7 +112,7 @@ export const Finance: React.FC = () => {
 
   const fetchTeachers = async () => {
     try {
-      const res = await api.get('/users/', { params: { limit: 100, role: 'teacher' } });
+      const res = await api.get('/users/', { params: { limit: 500, role: 'teacher' } });
       setTeachers(res.data.data || []);
     } catch (error) {
       console.error(error);
@@ -119,7 +121,7 @@ export const Finance: React.FC = () => {
 
   const fetchGroups = async () => {
     try {
-      const res = await api.get('/groups/', { params: { limit: 100 } });
+      const res = await api.get('/groups/', { params: { limit: 1000 } });
       setGroups(res.data.data || []);
     } catch (error) {
       console.error(error);
@@ -147,7 +149,7 @@ export const Finance: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab, month, year, selectedGroupId, selectedTeacherId]);
+  }, [activeTab, month, year, selectedGroupId, selectedTeacherId, searchQuery]);
 
   useEffect(() => {
     if (activeTab === 'debtors' && groups.length === 0) {
@@ -277,10 +279,10 @@ export const Finance: React.FC = () => {
           <h2 className="text-2xl font-bold text-white tracking-tight">Moliya</h2>
           <p className="text-gray-400 mt-1">To'lovlar, xarajatlar va maoshlar hisoboti.</p>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3 w-full sm:w-auto">
           <button 
             onClick={downloadExcel}
-            className="bg-gray-700 hover:bg-gray-600 text-emerald-400 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg border border-gray-600"
+            className="bg-gray-700 hover:bg-gray-600 text-emerald-400 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 shadow-lg border border-gray-600 w-full sm:w-auto"
           >
             <FileText className="w-5 h-5" />
             Excelga tushirish
@@ -288,7 +290,7 @@ export const Finance: React.FC = () => {
           {role === 'admin' && (
             <button 
               onClick={() => { setIsSalaryModalOpen(true); fetchTeachers(); }}
-              className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40"
+              className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 w-full sm:w-auto"
             >
               <Banknote className="w-5 h-5" />
               Maosh hisoblash
@@ -296,14 +298,14 @@ export const Finance: React.FC = () => {
           )}
           <button 
             onClick={() => setIsExpenseModalOpen(true)}
-            className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg shadow-red-500/20 hover:shadow-red-500/40"
+            className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 hover:shadow-red-500/40 w-full sm:w-auto"
           >
             <TrendingDown className="w-5 h-5" />
             Xarajat
           </button>
           <button 
             onClick={() => { setIsPaymentModalOpen(true); fetchStudents(); }}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 w-full sm:w-auto"
           >
             <Wallet className="w-5 h-5" />
             To'lov qabul qilish
@@ -350,7 +352,19 @@ export const Finance: React.FC = () => {
             </button>
           </div>
           
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3 items-center">
+            {activeTab === 'payments' && (
+              <div className="relative">
+                <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Ism yoki tel..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-gray-900 border border-gray-700 text-white text-sm rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:border-blue-500 shadow-inner w-[150px] sm:w-[200px]"
+                />
+              </div>
+            )}
             {activeTab === 'debtors' && (
               <select
                 value={selectedGroupId}
@@ -796,7 +810,30 @@ export const Finance: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-gray-400">Asosiy maosh (UZS)</label>
+                <div className="flex justify-between items-center">
+                  <label className="block text-sm font-medium text-gray-400">Asosiy maosh (UZS)</label>
+                  <button 
+                    type="button" 
+                    onClick={async () => {
+                      if (!salaryForm.user_id) return alert("O'qituvchini tanlang");
+                      try {
+                        const res = await api.get('/finance/salaries/calculate', {
+                          params: {
+                            user_id: salaryForm.user_id,
+                            period_month: salaryForm.period_month,
+                            period_year: salaryForm.period_year
+                          }
+                        });
+                        setSalaryForm(prev => ({...prev, base_amount: String(res.data.calculated_salary || 0)}));
+                      } catch (err) {
+                        alert("Hisoblashda xatolik");
+                      }
+                    }}
+                    className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded hover:bg-purple-500/30 transition"
+                  >
+                    Avtomat hisoblash
+                  </button>
+                </div>
                 <div className="relative">
                   <input 
                     type="number" required min="0"

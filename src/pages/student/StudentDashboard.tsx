@@ -125,7 +125,7 @@ export const StudentDashboard: React.FC = () => {
   const doneHomeworks = homeworks.filter(h => h.submitted);
 
   return (
-    <div className="relative min-h-screen space-y-8 animate-in fade-in duration-700 pb-20">
+    <div className="relative min-h-screen space-y-8 animate-in fade-in duration-700 pb-24 p-4 sm:p-6 lg:p-10 overflow-hidden">
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
           {Array.from({ length: 70 }).map((_, i) => (
@@ -254,7 +254,7 @@ export const StudentDashboard: React.FC = () => {
 
       {/* Floating Modern Tabs */}
       <div className="flex justify-center relative z-20 sticky top-4">
-        <div className="flex items-center p-1.5 bg-gray-900/70 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
+        <div className="flex items-center p-1.5 bg-gray-900/70 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-x-auto no-scrollbar max-w-full w-full sm:w-auto">
           {(['overview', 'homework', 'attendance'] as const).map(tab => {
             const isActive = activeTab === tab;
             const labels = { overview: "Guruhlarim", homework: "Vazifalar", attendance: "Davomat" };
@@ -262,7 +262,7 @@ export const StudentDashboard: React.FC = () => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`relative px-6 py-2.5 rounded-xl font-semibold transition-all duration-300 ${
+                className={`relative shrink-0 whitespace-nowrap px-4 sm:px-6 py-2.5 rounded-xl font-semibold transition-all duration-300 ${
                   isActive ? 'text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >

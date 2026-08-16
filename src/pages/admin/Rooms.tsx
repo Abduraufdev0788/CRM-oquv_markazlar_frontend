@@ -72,7 +72,7 @@ export const Rooms: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex justify-between items-center bg-gray-900/50 p-6 rounded-2xl border border-gray-800 shadow-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-900/50 p-6 rounded-2xl border border-gray-800 shadow-sm">
         <div>
           <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
             <LayoutGrid className="w-6 h-6 text-indigo-400" /> Xonalar
@@ -85,7 +85,7 @@ export const Rooms: React.FC = () => {
             setEditingId(null);
             setIsModalOpen(true);
           }}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-semibold transition-all shadow-sm active:scale-95"
+          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-semibold transition-all shadow-sm active:scale-95 w-full sm:w-auto justify-center"
         >
           <Plus className="w-5 h-5" />
           Yangi xona
@@ -93,7 +93,7 @@ export const Rooms: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-gray-900/80 p-1.5 rounded-xl w-fit border border-gray-800 shadow-inner">
+      <div className="flex flex-wrap gap-2 bg-gray-900/80 p-1.5 rounded-xl border border-gray-800 shadow-inner">
         <button
           onClick={() => setActiveTab('all')}
           className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${

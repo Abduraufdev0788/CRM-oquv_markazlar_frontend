@@ -32,13 +32,13 @@ export const StudentMaterials: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-20 relative">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-24 relative p-4 sm:p-6 lg:p-8 overflow-hidden">
       {/* Background ambient effects */}
       <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-pink-600/10 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-purple-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
       {/* Header Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-gray-900 to-gray-800 border border-white/10 p-8 md:p-12 shadow-2xl">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-gray-900 to-gray-800 border border-white/10 p-6 md:p-12 shadow-2xl">
         <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
           <BookOpen className="w-48 h-48 text-white rotate-12" />
         </div>
@@ -47,7 +47,7 @@ export const StudentMaterials: React.FC = () => {
             <Sparkles className="w-4 h-4" />
             <span>O'quv materiallari</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-400 mb-4 tracking-tight">
+          <h1 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-400 mb-4 tracking-tight">
             Bilimingizni oshirish uchun kerakli manbalar
           </h1>
           <p className="text-lg text-gray-400 leading-relaxed font-medium">

@@ -64,7 +64,7 @@ export const GroupDetails: React.FC = () => {
 
   const fetchAllStudents = async () => {
     try {
-      const res = await api.get('/students/', { params: { limit: 100 } });
+      const res = await api.get('/students/', { params: { limit: 5000 } });
       const currentEnrolledIds = enrollments.map(e => e.student_id);
       const available = res.data.data.filter((s: any) => !currentEnrolledIds.includes(s.id));
       setAllStudents(available);
@@ -289,11 +289,11 @@ export const GroupDetails: React.FC = () => {
       
       {activeTab === 'matrix' && (
         <div className="bg-gray-900/60 backdrop-blur-2xl border border-gray-700/60 rounded-3xl overflow-hidden shadow-2xl shadow-black/50 min-h-[600px] flex flex-col">
-          <div className="p-6 border-b border-gray-700/50 bg-gradient-to-r from-gray-900 to-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="p-6 border-b border-gray-700/50 bg-gradient-to-r from-gray-900 to-gray-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <h3 className="text-xl font-bold text-white flex items-center gap-3">
               Davomat Jurnali (Matrix)
             </h3>
-            <div className="flex bg-gray-900/80 p-1 rounded-xl border border-gray-700/50 shadow-inner">
+            <div className="flex bg-gray-900/80 p-1 rounded-xl border border-gray-700/50 shadow-inner flex-wrap gap-1">
               <button 
                 onClick={() => setLessonLimit(10)} 
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${lessonLimit === 10 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}

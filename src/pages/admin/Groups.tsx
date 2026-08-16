@@ -38,7 +38,7 @@ export const Groups: React.FC = () => {
   const fetchGroups = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/groups/', { params: { limit: 50 } });
+      const response = await api.get('/groups/', { params: { limit: 500 } });
       setGroups(response.data.data);
     } catch (error) {
       console.error("Guruhlar yuklanmadi:", error);
@@ -171,7 +171,7 @@ export const Groups: React.FC = () => {
         </div>
         <button 
           onClick={handleOpenCreate}
-          className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+          className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 w-full sm:w-auto shadow-lg shadow-blue-500/20"
         >
           <Plus className="w-5 h-5" />
           Yangi guruh

@@ -324,7 +324,7 @@ export const StudentFinance: React.FC = () => {
                </div>
             </div>
             
-            <div className="flex-1 w-full min-h-[140px]">
+            <div className="flex-1 w-full min-h-[160px] overflow-hidden -ml-2 sm:-ml-4">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                   <defs>
@@ -411,12 +411,12 @@ export const StudentFinance: React.FC = () => {
               Barcha To'lovlar Tarixi
             </h3>
             
-            <div className="flex items-center gap-3 bg-black/40 p-1.5 rounded-xl border border-white/10">
+            <div className="flex items-center gap-3 bg-black/40 p-1.5 rounded-xl border border-white/10 w-full sm:w-auto justify-between sm:justify-start">
                <div className="text-xs font-semibold text-gray-400 pl-3 hidden sm:block">
                  {isFetchingPayments ? 'Yuklanmoqda...' : `Jami: ${payments.length}`}
                </div>
                <div className="w-px h-5 bg-white/10 hidden sm:block"></div>
-               <div className="relative group">
+               <div className="relative group w-full sm:w-auto">
                   <select
                     value={limit}
                     onChange={(e) => setLimit(Number(e.target.value))}
@@ -426,7 +426,7 @@ export const StudentFinance: React.FC = () => {
                     <option value={50} className="bg-gray-900 text-white">Oxirgi 50 ta</option>
                     <option value={100} className="bg-gray-900 text-white">Oxirgi 100 ta</option>
                   </select>
-                  <ChevronDown className="w-3 h-3 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none group-hover:text-white" />
+                  <ChevronDown className="w-3 h-3 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none group-hover:text-white" />
                </div>
             </div>
           </div>

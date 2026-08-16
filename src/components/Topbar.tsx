@@ -140,49 +140,98 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
         <div className="relative" ref={notifRef}>
           <button 
             onClick={() => setShowNotif(!showNotif)}
-            className="relative text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-gray-800"
+            className="relative text-gray-400 hover:text-white transition-all duration-300 p-2.5 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 group"
           >
-            <Bell className="w-5 h-5" />
+            <Bell className="w-5 h-5 group-hover:animate-swing" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-gray-900 animate-pulse"></span>
+              <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border border-gray-900"></span>
+              </span>
             )}
           </button>
           
           {showNotif && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
-              <div className="p-4 border-b border-gray-700 flex items-center justify-between bg-gray-800/80 backdrop-blur-sm">
-                <h3 className="font-semibold text-white">Bildirishnomalar</h3>
+            <div className="fixed left-4 right-4 top-[70px] sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-[420px] bg-gray-900/95 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.7)] overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 sm:slide-in-from-top-4 duration-300 transform sm:origin-top-right">
+              {/* Header */}
+              <div className="p-5 border-b border-white/5 bg-gradient-to-r from-white/[0.02] to-transparent flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/20 rounded-xl border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+                    <Bell className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <h3 className="font-bold text-white text-lg tracking-tight">Bildirishnomalar</h3>
+                </div>
                 {unreadCount > 0 && (
-                  <button onClick={markAllAsRead} className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
-                    Barchasini o'qish
+                  <button onClick={markAllAsRead} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 text-xs font-semibold text-blue-400 hover:bg-blue-500/20 hover:text-blue-300 transition-colors border border-blue-500/20">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> O'qilgan qilish
                   </button>
                 )}
               </div>
-              <div className="max-h-[400px] overflow-y-auto">
+
+              {/* Notification List */}
+              <div className="max-h-[420px] overflow-y-auto custom-scrollbar">
                 {notifications.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500 text-sm">
-                    Yangi xabarlar yo'q
+                  <div className="p-10 text-center flex flex-col items-center justify-center">
+                    <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4 border border-white/5 shadow-inner">
+                      <Bell className="w-8 h-8 text-gray-600" />
+                    </div>
+                    <p className="text-gray-400 font-medium">Hozircha xabarlar yo'q</p>
+                    <p className="text-xs text-gray-500 mt-1">Yangi voqealar bu yerda ko'rinadi</p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-gray-700/50">
-                    {notifications.map((n) => (
-                      <div key={n.id} className={`p-4 transition-colors hover:bg-gray-700/30 ${!n.is_read ? 'bg-blue-900/10' : ''}`}>
-                        <div className="flex justify-between items-start gap-4">
-                          <div>
-                            <h4 className={`text-sm font-medium ${!n.is_read ? 'text-white' : 'text-gray-300'}`}>{n.title}</h4>
-                            <p className="text-xs text-gray-400 mt-1 leading-relaxed">{n.body}</p>
-                            <span className="text-[10px] text-gray-500 mt-2 block">
-                              {new Date(n.created_at).toLocaleString('uz-UZ')}
+                  <div className="divide-y divide-white/5">
+                    {notifications.map((n) => {
+                      const isUnread = !n.is_read;
+                      
+                      // Type bo'yicha ikonka va ranglarni aniqlash
+                      let Icon = Bell;
+                      let colorClass = "text-gray-400 bg-gray-500/10 border-gray-500/20";
+                      
+                      if (n.notif_type === 'ATTENDANCE') {
+                        Icon = Calendar;
+                        colorClass = "text-blue-400 bg-blue-500/10 border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.1)]";
+                      } else if (n.notif_type === 'PAYMENT_DUE' || n.notif_type === 'PAYMENT') {
+                        Icon = Wallet;
+                        colorClass = "text-amber-400 bg-amber-500/10 border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.1)]";
+                      } else if (n.notif_type === 'SYSTEM') {
+                        Icon = CheckCircle2;
+                        colorClass = "text-purple-400 bg-purple-500/10 border-purple-500/20 shadow-[0_0_10px_rgba(168,85,247,0.1)]";
+                      }
+
+                      return (
+                        <div key={n.id} className={`group relative p-5 transition-all duration-300 hover:bg-white/[0.03] flex gap-4 items-start ${isUnread ? 'bg-blue-500/[0.02]' : ''}`}>
+                          {isUnread && (
+                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-400 to-purple-500 rounded-r-full"></div>
+                          )}
+                          
+                          <div className={`p-2.5 rounded-2xl border ${colorClass} shrink-0 mt-0.5`}>
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <h4 className={`text-sm tracking-tight mb-1 ${isUnread ? 'font-bold text-white' : 'font-medium text-gray-300'}`}>
+                              {n.title}
+                            </h4>
+                            <p className={`text-xs leading-relaxed line-clamp-2 ${isUnread ? 'text-gray-300' : 'text-gray-500'}`}>
+                              {n.body}
+                            </p>
+                            <span className="text-[10px] text-gray-600 font-medium mt-2.5 block uppercase tracking-wider">
+                              {new Date(n.created_at).toLocaleString('uz-UZ', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
-                          {!n.is_read && (
-                            <button onClick={(e) => markAsRead(n.id, e)} className="text-gray-500 hover:text-emerald-400 p-1 rounded-full hover:bg-gray-700 transition-colors" title="O'qilgan deb belgilash">
+                          
+                          {isUnread && (
+                            <button 
+                              onClick={(e) => markAsRead(n.id, e)} 
+                              className="shrink-0 p-2 text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition-all border border-transparent hover:border-emerald-500/20 opacity-0 group-hover:opacity-100" 
+                              title="O'qilgan deb belgilash"
+                            >
                               <CheckCircle2 className="w-4 h-4" />
                             </button>
                           )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
