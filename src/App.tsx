@@ -25,6 +25,7 @@ import { TeacherTests } from './pages/teacher/TeacherTests';
 import { TeacherTestCreate } from './pages/teacher/TeacherTestCreate';
 import { TeacherTestDetails } from './pages/teacher/TeacherTestDetails';
 import { TeacherTestEdit } from './pages/teacher/TeacherTestEdit';
+import { TeacherFinance } from './pages/teacher/TeacherFinance';
 import { StudentDashboard } from './pages/student/StudentDashboard';
 import { StudentMaterials } from './pages/student/StudentMaterials';
 import { StudentSchedule } from './pages/student/StudentSchedule';
@@ -145,6 +146,7 @@ function App() {
                   <Route path="tests/create" element={<TeacherTestCreate />} />
                   <Route path="tests/:id" element={<TeacherTestDetails />} />
                   <Route path="tests/:id/edit" element={<TeacherTestEdit />} />
+                  <Route path="finance" element={<TeacherFinance />} />
                   <Route path="profile" element={<Profile />} />
                 </Routes>
               </ProtectedRoute>

@@ -90,6 +90,7 @@ export const Groups: React.FC = () => {
         teacher_id: g.teacher_id || '',
         start_date: g.start_date,
         max_students: g.max_students,
+        teacher_salary_pct: g.teacher_salary_pct ?? 40,
         schedule: g.schedule || []
       });
       setSelectedGroupId(g.id);

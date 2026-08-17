@@ -45,6 +45,7 @@ const managerLinks = [
 
 const teacherLinks = [
   { path: '/teacher', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/teacher/finance', label: 'Moliya', icon: Wallet },
   { path: '/teacher/groups', label: 'Guruhlarim', icon: Users },
   { path: '/teacher/schedule', label: 'Dars jadvali', icon: Calendar },
   { path: '/teacher/materials', label: 'Materiallar', icon: BookOpen },

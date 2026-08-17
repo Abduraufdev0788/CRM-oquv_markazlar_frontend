@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { LogOut, Bell, Search, Menu, CheckCircle2 } from 'lucide-react';
+import { LogOut, Bell, Search, Menu, CheckCircle2, Calendar, Wallet } from 'lucide-react';
 import { api } from '../services/api';
 
 interface TopbarProps {
@@ -77,9 +77,9 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
         </button>
         <div className="relative hidden sm:block">
           <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input 
-            type="text" 
-            placeholder="Qidirish (Talaba / Xodim)..." 
+          <input
+            type="text"
+            placeholder="Qidirish (Talaba / Xodim)..."
             onChange={async (e) => {
               const val = e.target.value.trim();
               if (val.length >= 2) {
@@ -95,7 +95,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
                     show: true
                   };
                   document.dispatchEvent(new Event('search-results-updated'));
-                } catch (err) {}
+                } catch (err) { }
               } else {
                 (window as any)._searchResults = { show: false, students: [], users: [] };
                 document.dispatchEvent(new Event('search-results-updated'));
@@ -117,7 +117,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
                   ]);
                   const stuCount = stuRes.data.data?.length || 0;
                   const userCount = userRes.data.data?.length || 0;
-                  
+
                   if (userCount > 0 && stuCount === 0) {
                     window.location.href = `/${role}/users?q=${encodeURIComponent(val)}`;
                   } else {
@@ -135,10 +135,10 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
       </div>
 
       <div className="flex items-center gap-4">
-        
+
         {/* Notifications */}
         <div className="relative" ref={notifRef}>
-          <button 
+          <button
             onClick={() => setShowNotif(!showNotif)}
             className="relative text-gray-400 hover:text-white transition-all duration-300 p-2.5 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 group"
           >
@@ -150,7 +150,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
               </span>
             )}
           </button>
-          
+
           {showNotif && (
             <div className="fixed left-4 right-4 top-[70px] sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-[420px] bg-gray-900/95 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.7)] overflow-hidden z-50 animate-in fade-in slide-in-from-top-4 sm:slide-in-from-top-4 duration-300 transform sm:origin-top-right">
               {/* Header */}
@@ -182,11 +182,11 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
                   <div className="divide-y divide-white/5">
                     {notifications.map((n) => {
                       const isUnread = !n.is_read;
-                      
+
                       // Type bo'yicha ikonka va ranglarni aniqlash
                       let Icon = Bell;
                       let colorClass = "text-gray-400 bg-gray-500/10 border-gray-500/20";
-                      
+
                       if (n.notif_type === 'ATTENDANCE') {
                         Icon = Calendar;
                         colorClass = "text-blue-400 bg-blue-500/10 border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.1)]";
@@ -203,11 +203,11 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
                           {isUnread && (
                             <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-400 to-purple-500 rounded-r-full"></div>
                           )}
-                          
+
                           <div className={`p-2.5 rounded-2xl border ${colorClass} shrink-0 mt-0.5`}>
                             <Icon className="w-5 h-5" />
                           </div>
-                          
+
                           <div className="flex-1 min-w-0">
                             <h4 className={`text-sm tracking-tight mb-1 ${isUnread ? 'font-bold text-white' : 'font-medium text-gray-300'}`}>
                               {n.title}
@@ -219,11 +219,11 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
                               {new Date(n.created_at).toLocaleString('uz-UZ', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
-                          
+
                           {isUnread && (
-                            <button 
-                              onClick={(e) => markAsRead(n.id, e)} 
-                              className="shrink-0 p-2 text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition-all border border-transparent hover:border-emerald-500/20 opacity-0 group-hover:opacity-100" 
+                            <button
+                              onClick={(e) => markAsRead(n.id, e)}
+                              className="shrink-0 p-2 text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition-all border border-transparent hover:border-emerald-500/20 opacity-0 group-hover:opacity-100"
                               title="O'qilgan deb belgilash"
                             >
                               <CheckCircle2 className="w-4 h-4" />
@@ -238,9 +238,9 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
             </div>
           )}
         </div>
-        
+
         <div className="h-6 w-px bg-gray-700 mx-1"></div>
-        
+
         <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
             <div className="text-sm font-medium text-white capitalize">{user?.full_name || `${role} User`}</div>
@@ -259,7 +259,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
           </Link>
         </div>
 
-        <button 
+        <button
           onClick={handleLogout}
           className="ml-2 text-gray-400 hover:text-red-400 p-2 rounded-lg hover:bg-red-500/10 transition-colors"
           title="Tizimdan chiqish"
@@ -291,8 +291,8 @@ const SearchResultsDropdown = ({ role }: { role: string | null }) => {
           <div className="mb-2">
             <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Xodimlar</div>
             {results.users.map((u: any) => (
-              <a 
-                key={u.id} 
+              <a
+                key={u.id}
                 href={`/${role}/users?q=${encodeURIComponent(u.full_name)}`}
                 className="block px-4 py-2 hover:bg-gray-700/50 transition-colors"
                 onMouseDown={(e) => e.preventDefault()}
@@ -303,13 +303,13 @@ const SearchResultsDropdown = ({ role }: { role: string | null }) => {
             ))}
           </div>
         )}
-        
+
         {results.students.length > 0 && (
           <div>
             <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Talabalar</div>
             {results.students.map((s: any) => (
-              <a 
-                key={s.id} 
+              <a
+                key={s.id}
                 href={`/${role}/students?q=${encodeURIComponent(s.full_name)}`}
                 className="block px-4 py-2 hover:bg-gray-700/50 transition-colors"
                 onMouseDown={(e) => e.preventDefault()}

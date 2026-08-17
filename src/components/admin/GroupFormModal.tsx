@@ -24,6 +24,7 @@ export interface GroupFormData {
   teacher_id: string;
   start_date: string;
   max_students: number;
+  teacher_salary_pct: number;
   schedule: ScheduleItem[];
 }
 
@@ -47,6 +48,7 @@ const defaultFormData: GroupFormData = {
   teacher_id: '',
   start_date: new Date().toISOString().split('T')[0],
   max_students: 15,
+  teacher_salary_pct: 40,
   schedule: [{ day: 'monday', start: '14:00', end: '16:00' }]
 };
 
@@ -201,6 +203,17 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
                 onChange={e => setFormData({...formData, max_students: parseInt(e.target.value) || 0})}
                 className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500"
               />
+            </div>
+            
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-400 mb-1.5">O'qituvchi ulushi (Foiz %)</label>
+              <input 
+                type="number" required min="0" max="100"
+                value={formData.teacher_salary_pct === undefined ? 40 : formData.teacher_salary_pct} 
+                onChange={e => setFormData({...formData, teacher_salary_pct: parseInt(e.target.value) || 0})}
+                className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">Har bir to'lovning necha foizi o'qituvchiga maosh qilib yoziladi (Odatda 40-50%).</p>
             </div>
           </div>
 
